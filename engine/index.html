@@ -52,6 +52,7 @@
                 var canvas = document.createElement("canvas");
                 let video = document.getElementById("campreviewfeed");
                 video.srcObject = stream;
+                video.play();
                 video.addEventListener( "loadedmetadata", function (e) {
                     const
                     width = this.videoWidth,
@@ -60,6 +61,7 @@
                     canvas.height = height;
 
                     console.log("video dimensions", width, height);
+                    video.play();
 
                     function scheduleNextDetection() {
                         setTimeout((timeout) => {
@@ -71,9 +73,9 @@
                                 processLoadedImage(image);
                                 scheduleNextDetection();
                             });
-                        }, 1500);
+                        }, 1000);
                     }
-                    scheduleNextDetection();
+                    setTimeout(scheduleNextDetection, 3000);
                 }, false);
             }
 
