@@ -1,0 +1,28 @@
+#campreview-edge-container, #camcrop,#rawdetect {
+    width: 100px;
+    min-height: 10px;
+    background: gray;
+    margin: 8px;
+    display: inline-block;
+}
+
+
+#campreview-edge-container, #campreview-edge-container * {
+    width: 400px;
+    height: 300px;
+}
+#campreview-edge-container * {
+    position: absolute;
+}
+
+
+#edgedetect {
+    opacity: 0.5;
+}
+#rawdetect {
+    width: 100px;
+    height: 100px;
+}
+#board {
+    width: 400px;
+}
