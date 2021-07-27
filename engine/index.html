@@ -1,5 +1,6 @@
 <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="main.css"/>
         <link rel="stylesheet" href="chessboard.css"/>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -42,6 +43,7 @@
                 try {
                     console.log("attempting to use back camera...");
                     stream = await navigator.mediaDevices.getUserMedia({ video: {
+                        aspectRatio: 1,
                         facingMode: { exact: "environment" }
                     }});
                 } catch(err) {
@@ -51,6 +53,9 @@
 
                 var canvas = document.createElement("canvas");
                 let video = document.getElementById("campreviewfeed");
+                video.autoplay = true;
+                video.muted = true;
+                video.playsInline = true;
                 video.srcObject = stream;
                 video.play();
                 video.addEventListener( "loadedmetadata", function (e) {
@@ -61,7 +66,6 @@
                     canvas.height = height;
 
                     console.log("video dimensions", width, height);
-                    video.play();
 
                     function scheduleNextDetection() {
                         setTimeout((timeout) => {
@@ -73,9 +77,9 @@
                                 processLoadedImage(image);
                                 scheduleNextDetection();
                             });
-                        }, 1000);
+                        }, 500);
                     }
-                    setTimeout(scheduleNextDetection, 3000);
+                    setTimeout(scheduleNextDetection, 1000);
                 }, false);
             }
 
