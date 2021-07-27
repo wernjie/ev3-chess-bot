@@ -1,0 +1,1 @@
+../dependencies/chessjs-repo/chess.js

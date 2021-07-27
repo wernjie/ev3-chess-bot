@@ -1,9 +1,9 @@
 [submodule "stockfishjs-repo"]
-	path = stockfishjs-repo
+	path = dependencies/stockfishjs-repo
 	url = https://github.com/nmrugg/stockfish.js
 [submodule "chessboardjs-repo"]
-	path = chessboardjs-repo
+	path = dependencies/chessboardjs-repo
 	url = https://github.com/oakmac/chessboardjs
 [submodule "chessjs-repo"]
-	path = chessjs-repo
+	path = dependencies/chessjs-repo
 	url = https://github.com/jhlywa/chess.js
