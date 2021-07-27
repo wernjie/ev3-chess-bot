@@ -14,8 +14,6 @@
 #campreview-edge-container * {
     position: absolute;
 }
-
-
 #edgedetect {
     opacity: 0.5;
 }

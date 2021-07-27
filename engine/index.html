@@ -11,7 +11,7 @@
     <body>
         <div id="campreview-edge-container">
             <video id="campreviewfeed" width="200" height="150" autoplay></video>
-            <canvas id="edgedetect" width="512" height="384"></canvas>
+            <canvas id="edgedetect" width="200" height="150"></canvas>
         </div>
         <canvas id="camcrop" width="256" height="256"></canvas>
         <div id="rawdetect"></div>
@@ -40,11 +40,13 @@
                 let stream; 
 
                 try {
+                    console.log("attempting to use back camera...");
                     stream = await navigator.mediaDevices.getUserMedia({ video: {
-                        facingMode: { exact: 'environment' }
-                    }, audio: false });
+                        facingMode: { exact: "environment" }
+                    }});
                 } catch(err) {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    console.log("falling back camera...");
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 }
 
                 var canvas = document.createElement("canvas");
@@ -58,15 +60,20 @@
                     canvas.height = height;
 
                     console.log("video dimensions", width, height);
-                    setInterval((timeout) => {
-                        canvas.getContext('2d').drawImage(video, 0, 0, width, height);
-                        let image = new Image();
-                        image.src = canvas.toDataURL('image/jpeg');
 
-                        image.addEventListener('load', function() {
-                            processLoadedImage(image);
-                        });
-                    }, 500);
+                    function scheduleNextDetection() {
+                        setTimeout((timeout) => {
+                            canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+                            let image = new Image();
+                            image.src = canvas.toDataURL('image/jpeg');
+
+                            image.addEventListener('load', function() {
+                                processLoadedImage(image);
+                                scheduleNextDetection();
+                            });
+                        }, 1500);
+                    }
+                    scheduleNextDetection();
                 }, false);
             }
 
