@@ -7,6 +7,7 @@
         <script src="chess.js"></script>
         <script src="chessboard.js"></script>
         <script src="chessboard_detection.js"></script>
+        <script src="chesspiece_detection.js"></script>
         <script src="filters.js"></script>
     </head>
     <body>
@@ -15,9 +16,16 @@
             <canvas id="edgedetect" width="200" height="150"></canvas>
         </div>
         <canvas id="camcrop" width="256" height="256"></canvas>
-        <div id="rawdetect"></div>
+        <div id="calcdetect"></div>
+        <div id="finaldetect"></div>
         <div id="board"></div>
         <script>
+            let video = document.getElementById("campreviewfeed");
+            let stream;
+
+            let resultCanvasElement = document.getElementById("camcrop");
+            let sobelCanvas = document.getElementById('edgedetect');
+
             let stockfish = new Worker("stockfish.js");
             let chess = Chess();
             let board = Chessboard('board', {
@@ -38,7 +46,6 @@
                 resetGame();
 
                 console.log(navigator, navigator.mediaDevices, navigator.getUserMedia);
-                let stream; 
 
                 try {
                     console.log("attempting to use back camera...");
@@ -52,7 +59,6 @@
                 }
 
                 var canvas = document.createElement("canvas");
-                let video = document.getElementById("campreviewfeed");
                 video.autoplay = true;
                 video.muted = true;
                 video.playsInline = true;
@@ -74,7 +80,8 @@
                             image.src = canvas.toDataURL('image/jpeg');
 
                             image.addEventListener('load', function() {
-                                processLoadedImage(image);
+                                processLoadedImage(image, resultCanvasElement, sobelCanvas);
+                                locateChessPiecesInCanvas(resultCanvasElement);
                                 scheduleNextDetection();
                             });
                         }, 500);

@@ -1,3 +1,4 @@
+//Modified from https://github.com/Elucidation/ChessboardDetect
 /*
 MIT License
 
@@ -60,9 +61,7 @@ function findLines(squashed) {
 }
 
 // Global ids used: resultCanvas, sobelCanvas
-function processLoadedImage(img) {
-    var resultCanvasElement = document.getElementById("camcrop"); // NOTE - global id used here.
-    var sobelCanvas = document.getElementById('edgedetect'); // NOTE - global id used here.
+function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
     var ctx = sobelCanvas.getContext('2d');
 
     // Resize the image
@@ -153,8 +152,8 @@ function processLoadedImage(img) {
     ctx.strokeStyle = '#ffff00';
     ctx.stroke();
 
-    // Build bounded and aligned grayscale 256x256 px chessboard to result canvas for prediction.
-    resultCanvasElement.width = 256;
-    resultCanvasElement.height = 256;
-    resultCanvasElement.getContext('2d').drawImage(internalCanvas,bbox.tl.x,bbox.tl.y, deltaX*8, deltaY*8, 0, 0, 256, 256);
+    // Build bounded and aligned 24x24 px chessboard to result canvas for prediction.
+    resultCanvasElement.width = 24;
+    resultCanvasElement.height = 24;
+    resultCanvasElement.getContext('2d').drawImage(internalCanvas,bbox.tl.x,bbox.tl.y, deltaX*8, deltaY*8, 0, 0, 24, 24);
 }
