@@ -25,6 +25,7 @@
         <div id="robotsignal"></div>
         <div id="button-container">
             <button id="reset" onclick="resetGame()">New Game</button>
+            <button id="torch" onclick="toggleTorch()">Toggle Flashlight</button>
             <button id="fullscreen" onclick="toggleFullscreen()">Fullscreen</button>
         </div>
         <div id="landscape-mode-hint"><b>ev3-chess-bot engine</b><br><br>Please use landscape mode.</div>
@@ -244,6 +245,7 @@
                 possibleUserMove = "";
                 possibleMoveConfidence = 0;
             }
+
             function toggleFullscreen() {
                 if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
                     let exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
@@ -259,6 +261,21 @@
                             alert("Your browser does not support fullscreen mode.");
                         }
                     }
+                }
+            }
+
+            let torchState = false;
+            function toggleTorch() {
+                if (stream) {
+                    torchState = !torchState;
+                    stream.getVideoTracks().forEach(function(track) {
+                        track.applyConstraints({
+                            advanced: [{torch: torchState}]
+                        });
+                    });
+                    alert("Flashlight is now " + (torchState ? "ON" : "OFF") + " if available.\n\niPhone and iPad currently might not be supported.");
+                } else {
+                    alert("Camera not running. Refresh page and try again, remembering to allow camera access.");
                 }
             }
 
