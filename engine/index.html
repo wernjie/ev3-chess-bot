@@ -383,7 +383,7 @@
                     tts = undefined;
                 }
                 if (synth && text) {
-                    if (tts.text == text) {
+                    if (tts && tts.text == text) {
                         return;
                     }
                     tts = new SpeechSynthesisUtterance(text);
