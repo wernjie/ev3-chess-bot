@@ -1,23 +1,43 @@
+html {
+    background-color: #000;
+}
+body {
+    background-color: #000;
+    padding: 4px;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    color: #fff;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+#top-preview-container {
+    position: absolute;
+    top: 4px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    text-align: center;
+}
 #campreview-edge-container, #camcrop, #calcdetect, #finaldetect {
-    width: 150px;
-    height: 150px;
+    width: 100px;
+    height: 100px;
     border: 1px solid red;
     display: inline-block;
+    text-align: left;
 }
-
 #campreview-edge-container, #campreview-edge-container * {
-    width: 150px;
-    height: 150px;
+    width: 100px;
+    height: 100px;
 }
 #campreview-edge-container * {
     position: absolute;
 }
+#campreviewfeed {
+}
 #edgedetect {
-    opacity: 0.5;
+    opacity: 0.4;
 }
-#board {
-    width: 250px;
-}
+
 
 #calcdetect *, #finaldetect * {
     width: 100%;
@@ -34,10 +54,97 @@
     line-height: calc(100% - 2px);
     margin: 0;
     font-family: sans-serif;
-    font-size: 9px;
+    font-size: 7px;
     font-weight: 700;
+}
+
+#board {
+    display: inline-block;
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    width: 150px;
+}
+
+#robotsignal {
+    display: inline-block;
+    position: absolute;
+    bottom: 4px;
+    left: calc(50% - 100px);
+    background-color: #f003;
+    border: 1px solid red;
+    width: 200px;
+    height: 150px;
+    z-index: 9999;
+}
+
+#button-container {
+    display: inline-block;
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 120px;
+}
+
+#statustext {
+    font-size: 24px;
+    line-height: 24px;
+    font-weight: bold;
+    text-align: center;
+    display: inline-block;
+    position: absolute;
+    padding: 0;
+    margin: 0;
+    top: calc(50% - 48px);
+    left: 0;
+    right: 0;
+    background-color: #0008;
+    z-index: 100;
 }
 
 sup, sub {
     font-size: 6px !important;
+}
+
+button {
+    font-size: 12px;
+    font-weight: bold;
+    background-color: #ccc;
+    color: #000;
+    padding: 4px;
+    margin: 4px;
+    height: 44px;
+    width: 100px;
+    cursor: pointer;
+    appearance: none;
+    border: none;
+    border-radius: 2px;
+    -webkit-appearance: none;
+    transition: all 0.2s ease-in-out;
+}
+button:active {
+    background-color: #888;
+    color: #fff;
+}
+
+#landscape-mode-hint {
+    display: inline-block;
+    position: absolute;
+    text-align: center;
+    font-size: 24px;
+    bottom: 4px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 32px;
+    width: calc(100% - 64px);
+    height: calc(100% - 64px);
+    background-color: black;
+    z-index: 10000;
+}
+@media (min-width: 512px) {
+    #landscape-mode-hint {
+        display: none;
+    }
 }
