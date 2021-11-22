@@ -60,7 +60,7 @@
                 resetGame();
 
                 resetRobotSignal();
-                setStatusText('Camera access required...');
+                setStatusText('Accessing camera...');
 
                 console.log(navigator, navigator.mediaDevices, navigator.getUserMedia);
 
@@ -72,7 +72,13 @@
                     }});
                 } catch(err) {
                     console.log("falling back camera...");
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    } catch (err) {
+                        console.log("failed to get camera stream");
+                        setStatusText('Camera access denied or not available.\nReload page to retry.');
+                        return;
+                    }
                 }
 
                 var canvas = document.createElement("canvas");
