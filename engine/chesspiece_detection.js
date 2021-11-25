@@ -90,7 +90,7 @@ function hslTrgb(h,s,l)
 }
 
 //Locates presence of pieces in a 256x256 canvas.
-function locateChessPiecesInCanvas(canvas) {
+function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
   let pixelData = Filters.getPixels(canvas);
   if (pixelData.height != pixelData.width || pixelData.height != 24) {
     //console.log("Invalid pixel data provided: ", pixelData);
@@ -122,11 +122,17 @@ function locateChessPiecesInCanvas(canvas) {
       let BR = i + 4*(2 + 24*2);
 
       try {
-        rgbMap[sq] = [TL, T, TR, CL, C, CR, BL, B, BR].map((x) => {return [pixelData.data[x], pixelData.data[x+1], pixelData.data[x+2]]});
+        rgbMap[sq] = [TL, T, TR, CL, C, CR, BL, B, BR].map((x) => {
+          return [
+            pixelData.data[x],
+            pixelData.data[x+1],
+            pixelData.data[x+2]
+          ];
+        });
 
-        let r = pixelData.data[C];
-        let g = pixelData.data[C+1];
-        let b = pixelData.data[C+2];
+        let r = pixelData.data[C]   ;
+        let g = pixelData.data[C+1] ;
+        let b = pixelData.data[C+2] ;
         let hsl = rgb2hsl(r,g,b);
 
         let tmpR = 0;
@@ -139,9 +145,9 @@ function locateChessPiecesInCanvas(canvas) {
         if (y <= 3 && x >= 4) { j = TR; }
         if (y >= 4 && x >= 4) { j = TL; }
 
-        tmpR += pixelData.data[j];
-        tmpG += pixelData.data[j+1];
-        tmpB += pixelData.data[j+2];
+        tmpR += pixelData.data[j]   ;
+        tmpG += pixelData.data[j+1] ;
+        tmpB += pixelData.data[j+2] ;
         let hsl_outer = rgb2hsl(tmpR, tmpG, tmpB);
 
         hslCenterMap[sq] = hsl;
@@ -155,6 +161,7 @@ function locateChessPiecesInCanvas(canvas) {
 
 
   let chessList = {};
+  let rawAdeList = {};
   let chessTilesValid = 0;
   let calcDetect = document.getElementById("calcdetect");
   let finalDetect = document.getElementById("finaldetect");
@@ -184,23 +191,30 @@ function locateChessPiecesInCanvas(canvas) {
         isWhitePiece = false;
       }
 
-      let diff = 0;
+      let avgDeltaE = 0;
       let rgbList = rgbMap[y+x];
       for (var i = 0; i < rgbList.length; i++) {
         let dE = deltaE(rgbList[i], rgbList[(i+1) % rgbList.length]);
-        diff += dE;
+        avgDeltaE += dE;
       }
-      diff /= rgbList.length;
-      if (diff <= 5) {isWhitePiece = false; isBlackPiece = false;}
+      avgDeltaE /= rgbList.length;
+      rawAdeList[y+x] = avgDeltaE;
 
-      let border = isWhitePiece ? "1px solid white;" : (isBlackPiece ? "1px solid green;" : "1px solid transparent;");
+      //Normalised to threshold 10 for piece detection
+      let adjustedDiff = rawAdeReferenceOffset && rawAdeReferenceOffset[y+x] !== undefined ? avgDeltaE - rawAdeReferenceOffset[y+x] : avgDeltaE - 2;
+      adjustedDiff = (adjustedDiff)*10/3;
+      if (adjustedDiff <= 10) {isWhitePiece = false; isBlackPiece = false;}
+
+      //Display contents
+      let border = isWhitePiece ? "1px solid #0b0;" : (isBlackPiece ? "1px solid red;" : "1px solid transparent;");
 
       str += "<span style='color: rgb("+rgb[0]+","+rgb[1]+","+rgb[2]+"); background-color: rgb("+rgb2[0]+","+rgb2[1]+","+rgb2[2]+"); border: " + border + ";'>" + y + x + "</span>";
 
-      let label = (isWhitePiece ? "W" : (isBlackPiece ? "B" : "")) + "<sup>" + Math.round(diff) + "</sup>";
+      let label = (isWhitePiece ? "W" : (isBlackPiece ? "B" : "")) + "<sup>" + Math.floor(Math.max(0, Math.min(adjustedDiff,99))) + "</sup>";
 
-      strFin += "<span style='color: gray; background-color: " + (isWhiteTile ? "white" : (isBlackTile ? "black": "gray")) + "; border: 1px solid transparent;'>" + label + "</span>"
+      strFin += "<span style='color: " + (isWhitePiece ? "#0b0" : (isBlackPiece ? "red" : "gray")) + "; background-color: " + (isWhiteTile ? "white" : (isBlackTile ? "black": "gray")) + "; border: 1px solid transparent;'>" + label + "</span>"
 
+      //Track piece position and valid tiles
       if (isWhitePiece) {
         chessList[y+x] = "W";
       } else if (isBlackPiece) {
@@ -226,5 +240,5 @@ function locateChessPiecesInCanvas(canvas) {
   }
   calcDetect.innerHTML = str;
   finalDetect.innerHTML = strFin;
-  return {board: chessList, validFraction: chessTilesValid/64};
+  return {board: chessList, boardRawADE: rawAdeList, validFraction: chessTilesValid/64};
 }

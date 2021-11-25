@@ -73,7 +73,6 @@ function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
     internalCanvas.height = height; // purposefully want a square
     internalCanvas.getContext('2d').drawImage(img, 0, 0, width, height);
 
-
     // Blur image, then run sobel filters on it.
     // imgData = Filters.getPixels(internalCanvas);
     var d = Filters.filterImage(Filters.gaussianBlur, internalCanvas, 15); // Blur it slightly.

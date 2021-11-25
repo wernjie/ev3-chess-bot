@@ -25,8 +25,8 @@
         <div id="robotsignal"></div>
         <div id="button-container">
             <button id="reset" onclick="resetGame()">New Game</button>
-            <button id="torch" onclick="toggleTorch()">Toggle Flashlight</button>
-            <button id="fullscreen" onclick="toggleFullscreen()">Fullscreen</button>
+            <button id="torch" onclick="calibrateBlank()">Calibrate Detection</button>
+            <button id="fullscreen" onclick="toggleFullscreen()">Toggle Fullscreen</button>
         </div>
         <div id="landscape-mode-hint"><b>ev3-chess-bot engine</b><br><br>Please use landscape mode.</div>
         <script>
@@ -81,6 +81,15 @@
                     }
                 }
 
+                //enable torch
+                if ('ImageCapture' in window) {
+                    const track = stream.getVideoTracks()[0];
+                    const imageCapture = new ImageCapture(track)
+                    const photoCapabilities = imageCapture.getPhotoCapabilities().then(() => {
+                        track.applyConstraints({ advanced: [{torch: true}] });
+                    });
+                }
+
                 var canvas = document.createElement("canvas");
                 video.autoplay = true;
                 video.muted = true;
@@ -105,7 +114,7 @@
                             image.addEventListener('load', function() {
                                 if (!signallingRobotMove) {
                                     processLoadedImage(image, resultCanvasElement, sobelCanvas);
-                                    let result = locateChessPiecesInCanvas(resultCanvasElement);
+                                    let result = locateChessPiecesInCanvas(resultCanvasElement, referenceBlankBoardRawADE);
                                     processChessPiecesResult(result);
                                 }
                                 scheduleNextDetection();
@@ -270,26 +279,24 @@
                 }
             }
 
-            let torchState = false;
-            function toggleTorch() {
-                if (stream) {
-                    torchState = !torchState;
-                    stream.getVideoTracks().forEach(function(track) {
-                        track.applyConstraints({
-                            advanced: [{torch: torchState}]
-                        });
-                    });
-                    alert("Flashlight is now " + (torchState ? "ON" : "OFF") + " if available.\n\niPhone and iPad currently might not be supported.");
-                } else {
-                    alert("Camera not running. Refresh page and try again, remembering to allow camera access.");
+            function calibrateBlank() {
+                if (calibrationMode) {
+                    calibrationMode = false;
+                    alert("Cancelled calibration.");
+                    return;
+                }
+                let cal = confirm("Please REMOVE ALL chess pieces from the chessboard - this calibrates empty chessboard detection to improve overall accuracy. When ready, press OK to begin calibration.");
+                if (cal) {
+                    cachedDetectedBoardStateConfidence = 0;
+                    calibrationMode = true;
                 }
             }
-
 
             //
             // Movement processing
             //
 
+            let calibrationMode = false;
             let awaitingStartPos = true;
             let signallingRobotMove = false;
             let awaitingRobotMove = false;
@@ -297,6 +304,7 @@
             let possibleMoveConfidence = 0;
             let cachedDetectedBoardState = {};
             let cachedDetectedBoardStateConfidence = 0;
+            let referenceBlankBoardRawADE = {};
 
             let tts;
             let synth = window.speechSynthesis;
@@ -426,7 +434,11 @@
 
                 if (chess.game_over()) {
                     if (chess.in_checkmate()) {
-                        setStatusText("Checkmate!", true);
+                        if (chess.turn() != "w") { //white checkmated
+                            setStatusText("Checkmate - you won!", true);
+                        } else {
+                            setStatusText("Checkmate - you lose!", true);
+                        }
                     } else if (chess.in_stalemate()) {
                         setStatusText("Stalemate!", true);
                     } else if (chess.in_draw()) {
@@ -442,20 +454,39 @@
                     } else {
                         setStatusText("Game over!", true);
                     }
+                    if (calibrateMode) {
+                        //forcibly reset game on calibration
+                        resetGame();
+                    }
                     return;
                 }
 
                 let detectedBoard = result.board;
-                if (objectKeyPairEqual(detectedBoard, cachedDetectedBoardState)) {
+
+                let boardStable = cachedDetectedBoardStateConfidence >= 3;
+                let boardValidFraction = result.validFraction;
+                let boardValid = boardValidFraction > 0.95;
+
+                if ((objectKeyPairEqual(detectedBoard, cachedDetectedBoardState) || calibrationMode) && boardValid) {
                     cachedDetectedBoardStateConfidence++;
                 } else {
                     cachedDetectedBoardStateConfidence = 0;
                     cachedDetectedBoardState = detectedBoard;
                 }
 
-                let boardStable = cachedDetectedBoardStateConfidence >= 3;
-                let boardValidFraction = result.validFraction;
-                let boardValid = boardValidFraction > 0.95;
+                if (calibrationMode) {
+                    if (boardValid) {
+                        setStatusText("Calibrating, please avoid interference...", true, true);
+                        if (cachedDetectedBoardStateConfidence >= 10) {
+                            calibrationMode = false;
+                            referenceBlankBoardRawADE = result.boardRawADE;
+                            setStatusText("Calibration complete!", true);
+                        }
+                    } else {
+                        setStatusText("Waiting for board visibility", true);
+                    }
+                    return;
+                }
 
                 if (!boardValid) {
                     if (awaitingRobotMove) {
@@ -529,9 +560,9 @@
                 if (whiteLost.length != whiteGain.length) {
                     console.log("white inconsistency detected: " + whiteLost + " to " + whiteGain);
                     if (whiteLost.length > whiteGain.length) {
-                        setStatusText("Invalid move - unexpected white piece removal: " + whiteLost);
+                        setStatusText("Invalid move - missing white piece(s) within " + whiteLost);
                     } else {
-                        setStatusText("Invalid move - unexpected extra white piece: " + whiteGain);
+                        setStatusText("Invalid move - extra white piece(s) within " + whiteGain);
                     }
                     speakText("Invalid move");
                     possibleMoveConfidence = 0;
@@ -578,18 +609,27 @@
                     }
                 }
 
-                if (moveHasCapture(move)) {
+                let moveCapture = moveHasCapture(move);
+                if (moveCapture) {
                     if (blackLost.length == 0) {
-                        setStatusText("Invalid move - unknown unexpected black piece detected");
+                        setStatusText("Invalid move - extra unexpected black piece detected");
                         speakText("Invalid move");
                         possibleMoveConfidence = 0;
                         possibleUserMove = "";
                         return;
+                    } else if (blackLost.length == 1) {
+                        if (moveCapture != blackLost[0]) {
+                            setStatusText("Illegal move - " + move + " cannot capture " + blackLost);
+                            speakText("Illegal move");
+                            possibleMoveConfidence = 0;
+                            possibleUserMove = "";
+                            return;
+                        }
                     }
                 } else {
                     if (blackLost.length > 0) {
-                        setStatusText("Invalid move - unexpected black piece captured: " + blackLost);
-                        speakText("Invalid move");
+                        setStatusText("Illegal move - " + move + " cannot capture " + blackLost);
+                        speakText("Illegal move");
                         possibleMoveConfidence = 0;
                         possibleUserMove = "";
                         return;
@@ -598,8 +638,8 @@
 
                 if (move == "") {
                     console.log("non-valid white move detected: " + whiteLost + " to " + whiteGain + "; " + blackLost + " to " + blackGain);
-                    setStatusText("Invalid move - too many pieces moved at once");
-                    speakText("Invalid move");
+                    setStatusText("Illegal move - too many pieces moved at once");
+                    speakText("Illegal move");
                     possibleMoveConfidence = 0;
                     possibleUserMove = "";
                     return;
@@ -625,7 +665,11 @@
                         possibleMoveConfidence = 0;
                         possibleUserMove = "";
                     } else {
-                        setStatusText("Illegal move " + move, true);
+                        if (chess.in_check()) {
+                            setStatusText("Illegal move " + move + "; currently in check", true);
+                        } else {
+                            setStatusText("Illegal move " + move, true);
+                        }
                         possibleMoveConfidence = 1000; //Lock at high value to prevent further executions
                     }
                 } else {
@@ -640,7 +684,7 @@
             function playerMove(m, ignore) {
                 m = splitInstSquares(m);
                 let promotion = moveHasPromotion(m);
-                if (!chess.move({from: m[0], to: m[1], promotion: promotion})) return false;
+                if (chess.turn() == "w" && !chess.move({from: m[0], to: m[1], promotion: promotion})) return false;
 
                 console.log("Player moved " + m);
                 moves.push(m.join(""));
@@ -665,7 +709,7 @@
                 let captures = moveHasCapture(m);
                 let castles = moveHasCastleMove(m);
                 let promotion = moveHasPromotion(m);
-                if (chess.move({from: m[0], to: m[1], promotion: promotion})) {
+                if (chess.turn() == "b" && chess.move({from: m[0], to: m[1], promotion: promotion})) {
 
                     console.log(
                         "Robot to move " + m
