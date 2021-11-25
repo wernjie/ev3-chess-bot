@@ -181,13 +181,12 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       let lT = Math.min(255,hslSideMap[y+x][2]*2.0);
       let rgb2 = hslTrgb(hT,sT,lT);
 
-      let THRESHOLD = 70
-      let isWhitePiece = l >= 70;
-      let isBlackPiece = l < 70;
+      let isWhitePiece = l >= 60;
+      let isBlackPiece = l < 80;
       let isWhiteTile = lT >= 100;
       let isBlackTile = lT < 100;
 
-      if ((Math.abs(h-hT) < 5 && (l-lT) < 20) && isWhiteTile) {
+      if ((Math.abs(h-hT) < 5 && (l-lT) < 10) && isWhiteTile) {
         isWhitePiece = false;
       }
 
