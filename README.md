@@ -84,7 +84,7 @@ A flash of `|_X_X_X_X_|_X_X_|_X_X_X_X_|_X_X_X_X_|_` is interpreted as "move piec
 
 The range of values for x-axis is 1-8, and y-axis is 0-8. Note that 1-8 are within the chess board, so values outside of 1-8 are out of the chessboard.
 
-Thus, "move piece on (4,2) to (4,4)" is equivalent to move ***d5d7***.
+Thus, "move piece on (4,2) to (4,4)" is equivalent to move ***d7d5***.
 
 <br/>
 
