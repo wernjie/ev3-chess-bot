@@ -63,7 +63,7 @@ Range of motion available from ***row 1*** to ***135° motor rotation past "row 
 
 - *NXT Light Sensor* at port 3. Mount in less than one piece distance above the screen. Ensure **screen is at full brightness**.
 
-Run program `phone-reader` and ensure successful connection to the two other EV3s. Asyncrhonously reads screen flashes from phone and interprets as movement.
+Run program `phone-reader` and ensure successful connection to the two other EV3s. Asynchronously reads screen flashes from phone and interprets as movement.
 
 - Press Center button to calibrate black levels at any time.
 - Press Left button to forcibly terminate all pending requests and request movement to top left (1,0) position, then terminate `phone-reader`. Useful in event of corrupted transmission.
@@ -78,13 +78,20 @@ Run program `phone-reader` and ensure successful connection to the two other EV3
 Transmission is performed by flashing the information to the EV3 from the phone screen to an NXT light sensor as basic coordinates in three light levels.
 - Black: separation gap (`_`)
 - Gray : coordinate counter (`X`)
-- White: coordinate separator (`|`)
+- White: coordinate separator (`|`) (twice as long in transmission time as well)
 
 A flash of `|_X_X_X_X_|_X_X_|_X_X_X_X_|_X_X_X_X_|_` is interpreted as "move piece on (4,2) to (4,4)", starting from bottom right from robots perspective (playing as black), with left+up as positive axes.
 
 The range of values for x-axis is 1-8, and y-axis is 0-8. Note that 1-8 are within the chess board, so values outside of 1-8 are out of the chessboard.
 
 Thus, "move piece on (4,2) to (4,4)" is equivalent to move ***d7d5***.
+
+The above format and translation to d7d5 is considered a single move.
+A move consists of 5 coordinate separators, terminates with a separation gap, and has the desired amount of coordinate counters in between.
+
+Transmission information is processed asynchronously, so the robot starts moving as soon as the starting coordinate pair of the first move is received to save time.
+
+Currently, a maximum of two moves in total can be queued asynchronously to allow for captures and castling. Any extra moves result in undefined behaviour.
 
 <br/>
 
