@@ -186,10 +186,6 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       let isWhiteTile = lT >= 100;
       let isBlackTile = lT < 100;
 
-      if ((Math.abs(h-hT) < 5 && (l-lT) < 10) && isWhiteTile) {
-        isWhitePiece = false;
-      }
-
       let avgDeltaE = 0;
       let rgbList = rgbMap[y+x];
       for (var i = 0; i < rgbList.length; i++) {
@@ -199,17 +195,22 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       avgDeltaE /= rgbList.length;
       rawAdeList[y+x] = avgDeltaE;
 
-      //Normalised to threshold 10 for piece detection
-      let adjustedDiff = rawAdeReferenceOffset && rawAdeReferenceOffset[y+x] !== undefined ? avgDeltaE - rawAdeReferenceOffset[y+x] : avgDeltaE - 2;
-      adjustedDiff = (adjustedDiff)*10/3;
-      if (adjustedDiff <= 10) {isWhitePiece = false; isBlackPiece = false;}
+      let adjustedDiff = rawAdeReferenceOffset && rawAdeReferenceOffset[y+x] !== undefined ?
+        avgDeltaE - rawAdeReferenceOffset[y+x] : avgDeltaE - 2;
+
+      if (adjustedDiff >= 2 || (isBlackPiece && isBlackTile && adjustedDiff >= 1.5)) {
+        //Consider a piece exists here.
+      } else {
+        isWhitePiece = false; isBlackPiece = false;
+      }
 
       //Display contents
       let border = isWhitePiece ? "1px solid #0b0;" : (isBlackPiece ? "1px solid red;" : "1px solid transparent;");
 
       str += "<span style='color: rgb("+rgb[0]+","+rgb[1]+","+rgb[2]+"); background-color: rgb("+rgb2[0]+","+rgb2[1]+","+rgb2[2]+"); border: " + border + ";'>" + y + x + "</span>";
 
-      let label = (isWhitePiece ? "W" : (isBlackPiece ? "B" : "")) + "<sup>" + Math.floor(Math.max(0, Math.min(adjustedDiff,99))) + "</sup>";
+      let adjDiffDescVal = adjustedDiff < 10 ? Math.max(0, adjustedDiff).toFixed(1) : Math.floor(adjustedDiff) + "";
+      let label = (isWhitePiece ? "W" : (isBlackPiece ? "B" : "")) + "<sup>" + adjDiffDescVal + "</sup>";
 
       strFin += "<span style='color: " + (isWhitePiece ? "#0b0" : (isBlackPiece ? "red" : "gray")) + "; background-color: " + (isWhiteTile ? "white" : (isBlackTile ? "black": "gray")) + "; border: 1px solid transparent;'>" + label + "</span>"
 

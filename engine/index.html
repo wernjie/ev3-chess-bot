@@ -21,13 +21,19 @@
             <div id="calcdetect"></div>
             <div id="finaldetect"></div>
         </div>
+        <div id="progressbar"><div id="progressbar-inner"></div></div>
+        <ol id="movelist"  type="1"></ol>
+        <div id="evalbar"><div id="evalbar-inner"></div></div>
+        <div id="evalbar-desc">+0.0</div>
         <div id="board"></div>
         <div id="robotsignal"></div>
         <div id="button-container">
             <button id="reset" onclick="resetGame()">New Game</button>
-            <button id="torch" onclick="setTorch(true)">Enable Torch</button>
-            <button id="calibrate" onclick="calibrateBlank()">Calibrate Detection</button>
-            <button id="fullscreen" onclick="toggleFullscreen()">Toggle Fullscreen</button>
+            <button id="fullscreenBtn" onclick="toggleFullscreen()">Fullscreen</button>
+            <button id="speechBtn" onclick="toggleSpeech()">Text to Speech</button>
+            <button id="torchBtn" onclick="toggleTorch()">Flashlight</button>
+            <button id="calibrateBlankBtn" onclick="calibrateBlank()">Calibrate Full Board</button>
+            <button id="calibratePartBtn" onclick="calibratePart()">Calibrate Selected...</button>
         </div>
         <div id="landscape-mode-hint"><b>ev3-chess-bot engine</b><br><br>Please use landscape mode.</div>
         <script src="main.js"></script>
