@@ -846,12 +846,10 @@ function processChessPiecesResult(result) {
     } else if (whiteGain.length == 1) {
         move = whiteLost[0] + whiteGain[0];
         if ((move == "e1g1" || move == "e1c1")) {
-            console.log("POSSIBLE CASTLING?")
-            let result = moveHasCastleMove(move);
-            if (result) {
-                console.log("CASTLING ILLEGAL!");
-                setStatusText("Illegal move - castling requires moving rook");
-                speakText("Illegal move");
+            if (chess.get("e1").type == "k") {
+                setStatusText("Illegal move - " + move, true);
+                possibleUserMove = "";
+                return;
             }
         }
     } else if (whiteGain.length == 2) {
