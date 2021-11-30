@@ -8,21 +8,27 @@ Message-passing done via flashing the screen and using an NXT light sensor to re
 
 ### Chess Engine and Message Passing
 
-Available at: https://wernjie.github.io/ev3-chess-bot/engine/
+Available at: [https://wernjie.github.io/ev3-chess-bot/engine/](https://wernjie.github.io/ev3-chess-bot/engine/)
 
-Run the webapp on a phone in landscape mode. Initiate full screen mode if possible. Mount it with the camera pointing to the chessboard, perfectly parallel, and taking up most of the viewfinder with edges in view. Automatic cropping and normalisation of the camera footage will take over, and you should see a perfect low resolution checkerboard image from the camera shown in the second preview from top left.
+Run the webapp on a phone in landscape mode. Initiate full screen mode if possible. Mount it with the camera pointing to the chessboard, perfectly parallel,
+and taking up most of the viewfinder with edges in view. Automatic cropping and normalisation of the camera footage will take over,
+and you should see a perfect low resolution checkerboard image from the camera shown in the second preview from top left.
 
-You may calibrate an empty chessboard by tapping **Calibrate Detection** and mounting the phone in the
+You may calibrate an empty chessboard by tapping **Calibrate Full Board** and mounting the phone in the
 same position and lighting conditions as you would be planning to permanently mount it for chess
 piece movement detection. This ensures highest possible accuracy.
 
-If possible, utilise uniform lighting or phone torch (only supported using Chrome on Android).
+If you want to recalibrate small portions of the chessboard midgame, you may also find the partial
+**Calibrate Selected...** useful. Follow the instructions for details.
+
+If possible, utilise uniform lighting for best performance, or if not available, use your phone's
+flashlight option (can only be enabled using Chrome on Android or browsers with similar engines).
 
 Please ensure screen is at ***full brightness*** for best detection performance by the *chess_reader* EV3.
 
 **Important caveats as of writing:**
-- Safari required for camera access if you're on an iPhone.
 - Chrome on Android required for toggling flash.
+- On iPhone, Safari might be necessary for fullscreen-like functionality using the Hide Toolbar option.
 
 <br/>
 
