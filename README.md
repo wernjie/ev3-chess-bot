@@ -4,7 +4,7 @@ Chess Bot Client Webapp to interface intepreted camera and Stockfish results wit
 
 Message-passing done via flashing the screen and using an NXT light sensor to recognise the data.
 
-## Installation and Usage
+## Setup, Installation and Usage
 
 ### Chess Engine and Message Passing
 
@@ -44,7 +44,7 @@ The default names for the three 'robots' are listed below and should be self-exp
 #### chess_x_axis
 
 - Movement using *Large Motor B*.
-    - Runs in reverse direction (negative power drives movement from column A to column H), offset -75° rotation away from chessboard column A (outside of the board).
+    - Runs in reverse direction (negative power drives movement from column A to column H), offset -80° rotation away from chessboard column A (outside of the board).
 - Pickup mechanism on *Large Motor A*.
     - range of motion approx slightly under 90°. Positive rotation to move mechanism down.
 - Claw mechanism on *Medium Motor D*.
@@ -52,17 +52,17 @@ The default names for the three 'robots' are listed below and should be self-exp
 
 Run program `x-axis` and wait for calibration confirmation beep. Should rest slightly before column A.
 
-Range of motion available from ***75° motor rotation before column A*** (jammed completely) to ***column H***.
+Range of motion available from ***80° motor rotation before column A*** (jammed completely at full power) to ***column H***.
 
 ---
 #### chess_y_axis
 
-- Movement *Medium Motor C* for left side (next to chessboard column A).
-- Movement *Medium Motor B* for right side (next to chessboard column H).
+- Movement *Medium Motor C* for left side (next to chessboard column A; clockwise goes from rows 8-1)
+- Movement *Medium Motor B* for right side (next to chessboard column H; anticlockwise goes from rows 8-1).
 
 Run program `y-axis` and wait for calibration confirmation beep. Should rest slightly past "row 9", ready to play as black.
 
-Range of motion available from ***row 1*** to ***135° motor rotation past "row 9"*** (i.e. one imaginary row out of chess board, jammed completely).
+Range of motion available from ***row 1*** to ***95° motor rotation past "row 9"*** (i.e. one imaginary row out of chess board, jammed completely).
 
 ---
 #### chess_reader
@@ -73,7 +73,7 @@ Run program `phone-reader` and ensure successful connection to the two other EV3
 
 - Press Center button to calibrate black levels at any time.
 - Press Left button to forcibly terminate all pending requests and request movement to top left (1,0) position, then terminate `phone-reader`. Useful in event of corrupted transmission.
-- Press Right button to send an arbitrary request to move a chess piece from (2,2) to (7,6) aka b7g3 to test movement accuracy. Only initiate when idle or may cause transmission corruption.
+- Press Right button to send an arbitrary request to perform move b7g3 or g7b3 to test movement accuracy. Warning: Only initiate when idle or may cause transmission corruption.
 
 ---
 
@@ -105,7 +105,7 @@ Currently, a maximum of two moves in total can be queued asynchronously to allow
 Uses average ∆E of pixels as a metric for detecting the presence of a piece.
 (with the assumption that chess pieces have a different hue from the chessboard, which is not uncommon).
 
-∆E measures the distance between two colours, commonly used for measuring monitor colour accuracy. \[[Details](http://zschuessler.github.io/DeltaE/learn)\].
+∆E measures the distance between two colours, commonly used for measuring monitor colour accuracy \[[Details](http://zschuessler.github.io/DeltaE/learn)\].
 
 For our case, the higher the ∆E value for a particular square tile, the more likely there is for a colour difference and thus presence of a piece.
 This is especially effective for detecting black pieces on dark tiles with slight hue differences.
