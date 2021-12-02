@@ -62,9 +62,6 @@ window.onload = async function () {
     }
     progressBarInnerElement.style.width = "100%";
 
-    //enable torch
-    setTorch(true, true);
-
     var canvas = document.createElement("canvas");
     video.autoplay = true;
     video.muted = true;
@@ -101,6 +98,13 @@ window.onload = async function () {
 }
 window.onresize = function() {
     updateMovesListDisplay();
+}
+document.onfullscreenchange = document.onwebkitfullscreenchange = document.onmozfullscreenchange = function() {
+    if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) {
+        document.getElementById("fullscreenBtn").classList.add("active");
+    } else {
+        document.getElementById("fullscreenBtn").classList.remove("active");
+    }
 }
 
 /* COOKIES */
@@ -404,7 +408,7 @@ function setTorch(enabled, silent) {
             track.applyConstraints({ advanced: [{torch: enabled}] });
         });
         torchState = enabled;
-        document.getElementById("torchBtn").classList.toggle("enabled", enabled);
+        document.getElementById("torchBtn").classList.toggle("active", enabled);
     } else if (!silent) {
         alert("Your browser does not support setting flashlight mode. Use Chrome for Android if you need to use flash to light up the chessboard.");
     }

@@ -198,7 +198,7 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       let adjustedDiff = rawAdeReferenceOffset && rawAdeReferenceOffset[y+x] !== undefined ?
         avgDeltaE - rawAdeReferenceOffset[y+x] : avgDeltaE - 2;
 
-      if (adjustedDiff >= 2 || (isBlackPiece && isBlackTile && adjustedDiff >= 1.5)) {
+      if (adjustedDiff >= 3 || (isBlackPiece && isBlackTile && adjustedDiff >= 1.5)) {
         //Consider a piece exists here.
       } else {
         isWhitePiece = false; isBlackPiece = false;
