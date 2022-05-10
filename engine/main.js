@@ -25,7 +25,9 @@ let movesSAN = [];
 let promotion_pref = 'q';
 
 /* INIT */
-window.onload = async function () {
+window.onload = init;
+
+async function init() {
 
     sendCmds(["uci"]);
     setDifficulty(10);
@@ -37,7 +39,6 @@ window.onload = async function () {
     } catch (e) {
         resetGame();
     }
-
     resetRobotSignal();
     setStatusText('Accessing camera...');
 
@@ -46,7 +47,7 @@ window.onload = async function () {
     try {
         console.log("attempting to use back camera...");
         stream = await navigator.mediaDevices.getUserMedia({ video: {
-            aspectRatio: 1,
+            aspectRatio: 16/9,
             facingMode: { exact: "environment" }
         }});
     } catch(err) {
@@ -69,8 +70,7 @@ window.onload = async function () {
     video.srcObject = stream;
     video.play();
     video.addEventListener( "loadedmetadata", function (e) {
-        const
-        width = this.videoWidth,
+        const width = this.videoWidth,
             height = this.videoHeight;
         canvas.width = width;
         canvas.height = height;
@@ -79,6 +79,12 @@ window.onload = async function () {
 
         function scheduleNextDetection() {
             setTimeout((timeout) => {
+                if (!stream.getTracks()[0].enabled) {
+                    setStatusText('Camera Analysis Paused');
+                    scheduleNextDetection();
+                    return;
+                }
+
                 canvas.getContext('2d').drawImage(video, 0, 0, width, height);
                 let image = new Image();
                 image.src = canvas.toDataURL('image/jpeg');
@@ -95,7 +101,15 @@ window.onload = async function () {
         }
         setTimeout(scheduleNextDetection, 1000);
     }, false);
+    document.getElementById("activateEngineBtn").classList.add("active");
 }
+function toggleCameraAnalysis() {
+    if (stream) {
+        let newState = (stream.getTracks()[0].enabled = !stream.getTracks()[0].enabled);
+        document.getElementById("activateEngineBtn").classList.toggle("active", newState);
+    }
+}
+
 window.onresize = function() {
     updateMovesListDisplay();
 }
@@ -387,9 +401,9 @@ function toggleFullscreen() {
         } else {
             //detect iphone user
             if (navigator.userAgent.match(/iPhone/i)) {
-                alert("Please use Safari, tap the 'Aa' button, then tap 'Hide Toolbar' for fullscreen use.");
+                swal("Please use Safari, tap the 'Aa' button, then tap 'Hide Toolbar' for fullscreen use.");
             } else {
-                alert("Your browser does not support fullscreen mode.");
+                swal("Your browser does not support fullscreen mode.");
             }
         }
     }
@@ -398,7 +412,7 @@ function toggleFullscreen() {
 let torchState = false;
 function setTorch(enabled, silent) {
     if (!stream) {
-        alert("No camera stream detected. Please reload and try again.");
+        swal("No camera stream detected. Please reload and try again.");
         return;
     }
     if ('ImageCapture' in window) {
@@ -410,7 +424,7 @@ function setTorch(enabled, silent) {
         torchState = enabled;
         document.getElementById("torchBtn").classList.toggle("active", enabled);
     } else if (!silent) {
-        alert("Your browser does not support setting flashlight mode. Use Chrome for Android if you need to use flash to light up the chessboard.");
+        swal("Your browser does not support setting flashlight mode. Use Chrome for Android if you need to use flash to light up the chessboard.");
     }
 }
 function toggleTorch() {
@@ -419,12 +433,12 @@ function toggleTorch() {
 
 function calibrateBlank() {
     if (!stream) {
-        alert("No camera stream detected. Please reload and try again.");
+        swal("No camera stream detected. Please reload and try again.");
         return;
     }
     if (calibrationMode) {
         calibrationMode = false;
-        alert("Cancelled calibration.");
+        swal("Cancelled calibration.");
         return;
     }
     let cal = confirm("Please REMOVE ALL chess pieces from the chessboard. When ready, press OK to begin calibration.");
@@ -435,12 +449,12 @@ function calibrateBlank() {
 }
 function calibratePart() {
     if (!stream) {
-        alert("No camera stream detected. Please reload and try again.");
+        swal("No camera stream detected. Please reload and try again.");
         return;
     }
     if (calibrationMode) {
         calibrationMode = false;
-        alert("Cancelled calibration.");
+        swal("Cancelled calibration.");
         return;
     }
     let cal = confirm("This consists of two steps. Step 1: Remove chess pieces on the squares you want to calibrate, then press OK to begin.");
@@ -466,6 +480,15 @@ let cachedDetectedBoardStateConfidence = 0;
 let cachedDetectedBoardRawADE = {};
 let referenceBlankBoardRawADE = {};
 
+
+window.addEventListener("load", function() {
+    try {
+        let c = JSON.parse(getCookie("referenceBlankBoardRawADE"));
+        if (c) referenceBlankBoardRawADE = c;
+    } catch (e) {
+        //
+    }
+});
 let tts;
 let synth = window.speechSynthesis;
 let speakingAllowed = false;
@@ -647,7 +670,7 @@ function processChessPiecesResult(result) {
     let detectedBoard = result.board;
 
     let boardValidFraction = result.validFraction;
-    let boardValid = boardValidFraction > 0.95;
+    let boardValid = boardValidFraction > 0.9;
 
     if ((
         (!calibrationMode && objectKeyPairEqual(detectedBoard, cachedDetectedBoardState)) ||
@@ -685,6 +708,7 @@ function processChessPiecesResult(result) {
                 if (calibrationMode == "BLANK") {
                     calibrationMode = false;
                     referenceBlankBoardRawADE = result.boardRawADE;
+                    setCookie("referenceBlankBoardRawADE", JSON.stringify(referenceBlankBoardRawADE), 365);
                     setStatusText("Calibration complete!", true);
 
                 } else if (calibrationMode == "PART_NOPC") {
@@ -723,6 +747,7 @@ function processChessPiecesResult(result) {
                     let res = confirm("Calibrated " + Object.keys(selectedDict) + ". Confirm?");
                     if (res) {
                         referenceBlankBoardRawADE = {...referenceBlankBoardRawADE, ...selectedDict};
+                        setCookie("referenceBlankBoardRawADE", JSON.stringify(referenceBlankBoardRawADE), 365);
                         setStatusText("Calibration complete!", true);
                     } else {
                         setStatusText("Calibration cancelled.");

@@ -32,10 +32,21 @@
             <button id="fullscreenBtn" onclick="toggleFullscreen()">Fullscreen</button>
             <button id="speechBtn" onclick="toggleSpeech()">Text to Speech</button>
             <button id="torchBtn" onclick="toggleTorch()">Flashlight</button>
-            <button id="calibrateBlankBtn" onclick="calibrateBlank()">Calibrate Full Board</button>
-            <button id="calibratePartBtn" onclick="calibratePart()">Calibrate Selected...</button>
+            <button id="activateEngineBtn" onclick="toggleCameraAnalysis()">Camera Analysis</button>
         </div>
         <div id="landscape-mode-hint"><b>ev3-chess-bot engine</b><br><br>Please use landscape mode.</div>
+        <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+        <script>
+            if (swal === undefined) {
+                //Polyfill sweetalert with alert() wrapped in Promise if missing
+                swal = (text) => {
+                    return new Promise((resolve, reject) => {
+                        alert(text);
+                        resolve();
+                    });
+                }
+            }
+        </script>
         <script src="main.js"></script>
     </body>
 </html>

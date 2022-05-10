@@ -63,6 +63,7 @@ function findLines(squashed) {
 // Global ids used: resultCanvas, sobelCanvas
 function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
     var ctx = sobelCanvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
 
     // Resize the image
     var internalCanvas = document.createElement('canvas'),
@@ -71,17 +72,18 @@ function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
     if (isNaN(height)) height = 512*3/4;
     internalCanvas.width = width;
     internalCanvas.height = height; // purposefully want a square
-    internalCanvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    var internalCanvasCtx = internalCanvas.getContext('2d')
+    internalCanvasCtx.drawImage(img, 0, 0, width, height);
 
     // Blur image, then run sobel filters on it.
     // imgData = Filters.getPixels(internalCanvas);
-    var d = Filters.filterImage(Filters.gaussianBlur, internalCanvas, 15); // Blur it slightly.
+    var d = Filters.filterImage(Filters.gaussianBlur, internalCanvas, 10); // Blur it slightly.
     d = Filters.sobel(d);
 
     // Visualize sobel image.
     sobelCanvas.width = d.width;
     sobelCanvas.height = d.height;
-    sobelCanvas.getContext('2d').putImageData(d, 0, 0);
+    ctx.putImageData(d, 0, 0);
 
     // Get squashed X and Y sobels (by summing along columns and rows respectively).
     squashed = squashSobels(d);
@@ -154,5 +156,7 @@ function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
     // Build bounded and aligned 24x24 px chessboard to result canvas for prediction.
     resultCanvasElement.width = 24;
     resultCanvasElement.height = 24;
-    resultCanvasElement.getContext('2d').drawImage(internalCanvas,bbox.tl.x,bbox.tl.y, deltaX*8, deltaY*8, 0, 0, 24, 24);
+    var resultCtx = resultCanvasElement.getContext('2d');
+    resultCtx.imageSmoothingEnabled = false;
+    resultCtx.drawImage(internalCanvas,bbox.tl.x,bbox.tl.y, deltaX*8, deltaY*8, 0, 0, 24, 24);
 }

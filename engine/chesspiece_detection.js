@@ -1,3 +1,4 @@
+// @ts-check
 //Computes HSL from RGB, https://css-tricks.com/converting-color-spaces-in-javascript/
 function rgb2hsl(r,g,b) {
   // Make r, g, and b fractions of 1
@@ -80,10 +81,10 @@ function deltaE(rgb1, rgb2) {
   return Math.sqrt(dL*dL + da*da + db*db);
 }
 
-// input: h in [0,360] and s,v in [0,255] - output: r,g,b in [0,255]
-function hslTrgb(h,s,l)
+// input: h in [0,360] and s,v in [0,100] - output: r,g,b in [0,255]
+function hsl2rgb(h,s,l)
 {
-  s /= 255; l /= 255;
+  s /= 100; l /= 100;
   let a= s*Math.min(l,1-l);
   let f= (n,k=(n+h/30)%12) => l - a*Math.max(Math.min(k-3,9-k,1),-1);
   return [f(0)*255,f(8)*255,f(4)*255];
@@ -91,18 +92,18 @@ function hslTrgb(h,s,l)
 
 //Locates presence of pieces in a 256x256 canvas.
 function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
+  // @ts-ignore the below is provided by filter.js
   let pixelData = Filters.getPixels(canvas);
   if (pixelData.height != pixelData.width || pixelData.height != 24) {
     //console.log("Invalid pixel data provided: ", pixelData);
     return;
   }
 
-
+  // Obtain pixels
   let xmap = "87654321";
   let ymap = "abcdefgh";
   let rgbMap = {};
-  let hslCenterMap = {};
-  let hslSideMap = {};
+  let hslMap = {};
   for (let x = 0; x < 8; x++) {
     for (let y = 0; y < 8; y++) {
       let i = 4*(x*3*24+y*3);
@@ -124,40 +125,40 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       try {
         rgbMap[sq] = [TL, T, TR, CL, C, CR, BL, B, BR].map((x) => {
           return [
-            pixelData.data[x],
-            pixelData.data[x+1],
-            pixelData.data[x+2]
+            +pixelData.data[x],
+            +pixelData.data[x+1],
+            +pixelData.data[x+2]
           ];
         });
-
-        let r = pixelData.data[C]   ;
-        let g = pixelData.data[C+1] ;
-        let b = pixelData.data[C+2] ;
-        let hsl = rgb2hsl(r,g,b);
-
-        let tmpR = 0;
-        let tmpG = 0;
-        let tmpB = 0;
-        let j;
-
-        if (y <= 3 && x <= 3) { j = BR; }
-        if (y >= 4 && x <= 3) { j = BL; }
-        if (y <= 3 && x >= 4) { j = TR; }
-        if (y >= 4 && x >= 4) { j = TL; }
-
-        tmpR += pixelData.data[j]   ;
-        tmpG += pixelData.data[j+1] ;
-        tmpB += pixelData.data[j+2] ;
-        let hsl_outer = rgb2hsl(tmpR, tmpG, tmpB);
-
-        hslCenterMap[sq] = hsl;
-        hslSideMap[sq] = hsl_outer;
-
+        hslMap[sq] = rgbMap[sq].map((x) => rgb2hsl(x[0], x[1], x[2]));
       } catch (e) {
         console.log(e);
       }
     }
   }
+
+  // Scale luminance to maximise 0-100
+  let maxLuminanceVal = 0.1;
+  for (let sq in hslMap) {
+    let hslList = hslMap[sq];
+    for (let hsl of hslList) {
+      let l = hsl[2];
+      if (l > maxLuminanceVal) {
+        maxLuminanceVal = l;
+      }
+    }
+  }
+  for (let sq in hslMap) {
+    let hslList = hslMap[sq];
+    for (let hsl of hslList) {
+      hsl[2] = hsl[2] / maxLuminanceVal * 100;
+    }
+  }
+  for (let sq in hslMap) {
+    let hslList = hslMap[sq];
+    rgbMap[sq] = hslList.map((x) => hsl2rgb(x[0], x[1], x[2]));
+  }
+
 
 
   let chessList = {};
@@ -171,48 +172,103 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
     str += "<div>";
     strFin += "<div>";
     for (let y of ymap) {
-      let h = hslCenterMap[y+x][0];
-      let s = 255//satMap[y+x];
-      let l = Math.min(255,hslCenterMap[y+x][2]*2.0);
-      let rgb = hslTrgb(h,s,l);
-
-      let hT = hslSideMap[y+x][0];
-      let sT = 255//satMap[y+x];
-      let lT = Math.min(255,hslSideMap[y+x][2]*2.0);
-      let rgb2 = hslTrgb(hT,sT,lT);
-
-      let isWhitePiece = l >= 60;
-      let isBlackPiece = l < 80;
-      let isWhiteTile = lT >= 100;
-      let isBlackTile = lT < 100;
-
-      let avgDeltaE = 0;
-      let rgbList = rgbMap[y+x];
-      for (var i = 0; i < rgbList.length; i++) {
-        let dE = deltaE(rgbList[i], rgbList[(i+1) % rgbList.length]);
-        avgDeltaE += dE;
+      let sq = y + x;
+      let rgbColorGroups = []; // [[[r,g,b], N], [[r,g,b], N], ...]
+      for (let i = 0; i < 8; i++) {
+        let refRgbColor = rgbMap[sq][i];
+        let refHslColor = hslMap[sq][i];
+        let inserted = false;
+        for (let existingColorGroup of rgbColorGroups) {
+          let existingRgbColor = existingColorGroup[0];
+          let existingHslColor = rgb2hsl(...existingColorGroup[0]);
+          let dE = deltaE(refRgbColor, existingRgbColor);
+          if (dE <= 12) {
+            existingColorGroup[1]++;
+            inserted = true;
+            break;
+          }
+        }
+        if (!inserted) {
+          rgbColorGroups.push([refRgbColor, 1]);
+        }
       }
-      avgDeltaE /= rgbList.length;
-      rawAdeList[y+x] = avgDeltaE;
+      rgbColorGroups.sort((a,b) => {
+        return b[1] - a[1];
+      });
 
-      let adjustedDiff = rawAdeReferenceOffset && rawAdeReferenceOffset[y+x] !== undefined ?
-        avgDeltaE - rawAdeReferenceOffset[y+x] : avgDeltaE - 2;
+      let hslColorGroups = []; // [[[h,s,l], N], [[h,s,l], N], ...]
+      hslColorGroups = rgbColorGroups.map((x) => {
+        return [rgb2hsl(...x[0]), x[1]];
+      });
 
-      if (adjustedDiff >= 3 || (isBlackPiece && isBlackTile && adjustedDiff >= 1.5)) {
-        //Consider a piece exists here.
-      } else {
-        isWhitePiece = false; isBlackPiece = false;
+      let mostDominantRGB = rgbColorGroups[0][0];
+      let leastDominantRGB = rgbColorGroups[Math.min(1, rgbColorGroups.length-1)][0];
+
+      let mostDominantHSL = hslColorGroups[0][0];
+      let leastDominantHSL = hslColorGroups[Math.min(1, hslColorGroups.length-1)][0];
+
+      let sum = (array) => array.reduce((a,b) => a + b, 0);
+
+      let isWhitePiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) => {
+        let hsl = x[0];
+        // check high luminance and orange hue
+        return (hsl[0] > 0 && hsl[0] < 60 && hsl[1] > 20 && hsl[2] > 30);
+      }).map((x) => x[1]));
+      let isBlackPiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) => {
+        let hsl = x[0];
+        // check low luminance and saturation
+        return (hsl[1] < 30 && hsl[2] < 30) || hsl[2] < 10;
+      }).map((x) => x[1]));
+
+      if (isBlackPiece && isWhitePiece) {
+        if (isBlackPiece > isWhitePiece) {
+          isWhitePiece = false;
+        } else {
+          isBlackPiece = false;
+        }
       }
+
+      isBlackPiece = !!isBlackPiece;
+      isWhitePiece = !!isWhitePiece;
+
+      let isBlackTile = hslColorGroups.some((x) => {
+        let hsl = x[0];
+        // check green hue and relatively high saturation
+        if (hsl[0] > 80 && hsl[0] < 140 && hsl[1] > 20) {
+          return true;
+        }
+      });
+      let isWhiteTile = hslColorGroups.some((x) => {
+        let hsl = x[0];
+        // check very low saturation and very high luminance
+        return (hsl[1] < 20 && hsl[2] > 30);
+      });
+      if (isWhiteTile && isBlackTile) {
+        isWhiteTile = false;
+        isBlackTile = false;
+      }
+      let nonTile = !isBlackTile && !isWhiteTile;
+      let nonPiece = !isBlackPiece && !isWhitePiece;
+      let possibleInterference = nonTile || (nonPiece && rgbColorGroups.length > 1)
 
       //Display contents
-      let border = isWhitePiece ? "1px solid #0b0;" : (isBlackPiece ? "1px solid red;" : "1px solid transparent;");
+      let p1pieceHighlightHint = (isWhitePiece ? "#0df" : (isBlackPiece ? "red" : null));
+      let p1borderPieceColor = "1px solid " + (p1pieceHighlightHint || "transparent");
+      let p2fontColor = nonTile ? (p1pieceHighlightHint || "gray") : (isWhitePiece ? "white" : (isBlackPiece ? "black" : "gray"));
+      let p2bgTileColor = (!nonTile && p1pieceHighlightHint) || (isWhiteTile ? "white" : (isBlackTile ? "black": "#870"));
+      let p2borderTileColor = nonTile || possibleInterference ? "1px solid orange" : "1px solid transparent";
 
-      str += "<span style='color: rgb("+rgb[0]+","+rgb[1]+","+rgb[2]+"); background-color: rgb("+rgb2[0]+","+rgb2[1]+","+rgb2[2]+"); border: " + border + ";'>" + y + x + "</span>";
+      let rgb2ColStr = (rgb) => {
+        return "rgb(" + rgb.join(",") + ")";
+      };
+      ((fgRGB, bgRGB) => {
+        str += "<span style='color: "+fgRGB+"; background-color: "+bgRGB+"; border: " + p1borderPieceColor + ";'>" + y + x + "</span>";
+      })(rgb2ColStr(leastDominantRGB), rgb2ColStr(mostDominantRGB));
 
-      let adjDiffDescVal = adjustedDiff < 10 ? Math.max(0, adjustedDiff).toFixed(1) : Math.floor(adjustedDiff) + "";
+      let adjDiffDescVal = rgbColorGroups.length > 1 ? (rgbColorGroups.length - 1) : ""//adjustedDiff < 10 ? Math.max(0, adjustedDiff).toFixed(1) : Math.floor(adjustedDiff) + "";
       let label = (isWhitePiece ? "W" : (isBlackPiece ? "B" : "")) + "<sup>" + adjDiffDescVal + "</sup>";
 
-      strFin += "<span style='color: " + (isWhitePiece ? "#0b0" : (isBlackPiece ? "red" : "gray")) + "; background-color: " + (isWhiteTile ? "white" : (isBlackTile ? "black": "gray")) + "; border: 1px solid transparent;'>" + label + "</span>"
+      strFin += "<span style='color: " + p2fontColor  + "; background-color: " + p2bgTileColor + "; border: "+p2borderTileColor+";'>" + label + "</span>"
 
       //Track piece position and valid tiles
       if (isWhitePiece) {

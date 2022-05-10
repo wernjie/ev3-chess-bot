@@ -4,11 +4,16 @@ html {
 body {
     background-color: #000;
     padding: 4px;
-    margin: 0;
+    margin: 0 auto;
     color: #fff;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 #top-preview-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     position: absolute;
     top: 8px;
     left: 0;
@@ -21,17 +26,35 @@ body {
     height: 100px;
     border: 1px solid #333;
     display: inline-block;
+    position: relative;
     text-align: left;
     pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
 }
 #campreview-edge-container, #campreview-edge-container * {
-    width: 100px;
-    height: 100px;
+    width: 140px;
+    height: 79px;
 }
 #campreview-edge-container * {
     position: absolute;
+}
+#campreview-edge-container:before, #campreview-edge-container:after {
+    content: " ";
+    background-color: #800a;
+    position: relative;
+    display: float;
+    float: left;
+    width: 30px;
+    height: 79px;
+    z-index: 999;
+    margin-right: -79px;
+}
+#campreview-edge-container:after {
+    float: right;
+    z-index: 999;
+    margin-right: unset;
+    margin-left: -79px;
 }
 #campreviewfeed {
 }
@@ -40,13 +63,13 @@ body {
 }
 
 
-#calcdetect *, #finaldetect * {
+#calcdetect > *, #finaldetect > * {
     width: 100%;
     height: 12.5%;
     display: inline-block;
 }
 
-#calcdetect * *, #finaldetect * * {
+#calcdetect > * > *, #finaldetect > * > * {
     width: calc(12.5% - 2px);
     height: calc(100% - 2px);
     display: inline-block;
@@ -55,7 +78,7 @@ body {
     line-height: calc(100% - 2px);
     margin: 0;
     font-family: sans-serif;
-    font-size: 7px;
+    font-size: 6px;
     font-weight: 700;
 }
 
@@ -206,8 +229,8 @@ button:active {
     color: #fff;
 }
 button.active {
-    background-color: #fff;
-    color: #222;
+    background-color: #0a0;
+    color: #eee;
 }
 
 .hidden {
