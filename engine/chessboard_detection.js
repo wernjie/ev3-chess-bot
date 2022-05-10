@@ -70,10 +70,11 @@ function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
         width = 512,
         height = Math.floor((img.height * width) / img.width);
     if (isNaN(height)) height = 512*3/4;
-    internalCanvas.width = width;
-    internalCanvas.height = height; // purposefully want a square
+    // purposefully want a square
+    internalCanvas.width = height;
+    internalCanvas.height = height;
     var internalCanvasCtx = internalCanvas.getContext('2d')
-    internalCanvasCtx.drawImage(img, 0, 0, width, height);
+    internalCanvasCtx.drawImage(img, -(width-height)/2, 0, width, height);
 
     // Blur image, then run sobel filters on it.
     // imgData = Filters.getPixels(internalCanvas);

@@ -33,13 +33,13 @@ body {
     -webkit-user-select: none;
 }
 #campreview-edge-container, #campreview-edge-container * {
-    width: 140px;
-    height: 79px;
+    width: 100px;
+    height: 100px;
 }
 #campreview-edge-container * {
     position: absolute;
 }
-#campreview-edge-container:before, #campreview-edge-container:after {
+/*#campreview-edge-container:before, #campreview-edge-container:after {
     content: " ";
     background-color: #800a;
     position: relative;
@@ -55,8 +55,9 @@ body {
     z-index: 999;
     margin-right: unset;
     margin-left: -79px;
-}
+}*/
 #campreviewfeed {
+    object-fit: cover;
 }
 #edgedetect {
     opacity: 0.5;
