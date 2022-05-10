@@ -234,7 +234,7 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       ).map((x) => x[1]));
 
       let isWhitePiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) =>
-        isHslWhitePiece(x[0]) && !isHslBlackTile(x[0])
+        isHslWhitePiece(x[0]) && !isHslBlackTile(x[0]) && !isHslWhiteTile(x[0])
       ).map((x) => x[1]));
 
       if (isBlackPiece && isWhitePiece) {
