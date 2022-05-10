@@ -40,7 +40,7 @@ async function init() {
         resetGame();
     }
     resetRobotSignal();
-    setStatusText('Accessing camera...');
+    setStatusText('Activating camera analysis...');
 
     console.log(navigator, navigator.mediaDevices, navigator.getUserMedia);
 
@@ -78,9 +78,10 @@ async function init() {
         console.log("video dimensions", width, height);
 
         function scheduleNextDetection() {
+            let wasEnabled = stream.getTracks()[0].enabled;
             setTimeout((timeout) => {
-                if (!stream.getTracks()[0].enabled) {
-                    setStatusText('Camera Analysis Paused');
+                let isEnabled = stream.getTracks()[0].enabled;
+                if (!isEnabled && !wasEnabled) {
                     scheduleNextDetection();
                     return;
                 }
@@ -95,6 +96,10 @@ async function init() {
                         let result = locateChessPiecesInCanvas(resultCanvasElement, referenceBlankBoardRawADE);
                         processChessPiecesResult(result);
                     }
+                    if (!isEnabled) {
+                        video.pause();
+                        setStatusText('Camera Analysis PAUSED');
+                    }
                     scheduleNextDetection();
                 });
             }, 500);
@@ -104,8 +109,14 @@ async function init() {
     document.getElementById("activateEngineBtn").classList.add("active");
 }
 function toggleCameraAnalysis() {
-    if (stream) {
+    if (stream && video) {
         let newState = (stream.getTracks()[0].enabled = !stream.getTracks()[0].enabled);
+        if (newState) {
+            video.play();
+            setStatusText('Activating camera analysis...');
+        } else {
+            setStatusText('Deactivating camera analysis...');
+        }
         document.getElementById("activateEngineBtn").classList.toggle("active", newState);
     }
 }
