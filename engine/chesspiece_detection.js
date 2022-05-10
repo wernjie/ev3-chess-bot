@@ -256,7 +256,9 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       let p1borderPieceColor = "1px solid " + (p1pieceHighlightHint || "transparent");
       let p2fontColor = nonTile ? (p1pieceHighlightHint || "gray") : (isWhitePiece ? "white" : (isBlackPiece ? "black" : "gray"));
       let p2bgTileColor = (!nonTile && p1pieceHighlightHint) || (isWhiteTile ? "white" : (isBlackTile ? "black": "#870"));
-      let p2borderTileColor = nonTile || possibleInterference ? "1px solid orange" : "1px solid transparent";
+      let p2borderTileColor = nonTile || possibleInterference ? "1px solid orange" : (
+        "1px solid " + (isWhiteTile ? "white" : (isBlackTile ? "black" : "orange"))
+      );
 
       let rgb2ColStr = (rgb) => {
         return "rgb(" + rgb.join(",") + ")";

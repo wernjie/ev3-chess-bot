@@ -47,7 +47,7 @@ async function init() {
     try {
         console.log("attempting to use back camera...");
         stream = await navigator.mediaDevices.getUserMedia({ video: {
-            aspectRatio: 16/9,
+            aspectRatio: 1,
             facingMode: { exact: "environment" }
         }});
     } catch(err) {
