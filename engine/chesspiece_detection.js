@@ -138,22 +138,31 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
   }
 
   // Scale luminance to maximise 0-100
-  let maxLuminanceVal = 0.1;
-  for (let sq in hslMap) {
-    let hslList = hslMap[sq];
-    for (let hsl of hslList) {
-      let l = hsl[2];
-      if (l > maxLuminanceVal) {
-        maxLuminanceVal = l;
+  for (let x of xmap) {
+    //scale by every row of pixels
+    for (let inSquareOffset of [0,3,6]) {
+      let maxLuminanceVal = 0.1;
+      for (let y of ymap) {
+        let sq = y + x;
+        for (let i = inSquareOffset; i < inSquareOffset + 3; i++) {
+          let hsl = hslMap[sq][i];
+          let l = hsl[2];
+          if (l > maxLuminanceVal) {
+            maxLuminanceVal = l;
+          }
+        }
+      }
+      for (let y of ymap) {
+        let sq = y + x;
+        for (let i = inSquareOffset; i < inSquareOffset + 3; i++) {
+          let hsl = hslMap[sq][i];
+          hsl[2] = hsl[2] / maxLuminanceVal * 100;
+          hslMap[sq][i] = hsl;
+        }
       }
     }
   }
-  for (let sq in hslMap) {
-    let hslList = hslMap[sq];
-    for (let hsl of hslList) {
-      hsl[2] = hsl[2] / maxLuminanceVal * 100;
-    }
-  }
+  // Map to new rgb values
   for (let sq in hslMap) {
     let hslList = hslMap[sq];
     rgbMap[sq] = hslList.map((x) => hsl2rgb(x[0], x[1], x[2]));
@@ -201,24 +210,32 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
         return [rgb2hsl(...x[0]), x[1]];
       });
 
-      let mostDominantRGB = rgbColorGroups[0][0];
-      let leastDominantRGB = rgbColorGroups[Math.min(1, rgbColorGroups.length-1)][0];
-
-      let mostDominantHSL = hslColorGroups[0][0];
-      let leastDominantHSL = hslColorGroups[Math.min(1, hslColorGroups.length-1)][0];
-
       let sum = (array) => array.reduce((a,b) => a + b, 0);
 
-      let isWhitePiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) => {
-        let hsl = x[0];
-        // check high luminance and orange hue
-        return (hsl[0] > 0 && hsl[0] < 60 && hsl[1] > 20 && hsl[2] > 30);
-      }).map((x) => x[1]));
-      let isBlackPiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) => {
-        let hsl = x[0];
-        // check low luminance and saturation
-        return (hsl[1] < 30 && hsl[2] < 30) || hsl[2] < 10;
-      }).map((x) => x[1]));
+      // -- helper HSL color checks --
+      // check blue hue, very low saturation and very high luminance
+      let isHslWhiteTile =  (hsl) => ((hsl[0] < 90 || hsl[0] > 140) && hsl[1] < (0.5*Math.abs(hsl[2]-50)+5) && hsl[2] > 70) || hsl[2] > 95;
+      // check green hue and relatively high saturation
+      let isHslBlackTile =  (hsl) => (hsl[0] > 80 && hsl[0] < 140 && hsl[1] > hsl[2]/2 && hsl[2] > 20 && hsl[2] < 80);
+      // check high luminance and orange hue
+      let isHslWhitePiece = (hsl) => (hsl[0] > 20 && hsl[0] < 80 && hsl[1] > 10 && hsl[2] > 30 && hsl[2] < 90);
+      // check low luminance and saturation
+      let isHslBlackPiece = (hsl) => (hsl[1] < hsl[2]/3 && hsl[2] < 30) || (hsl[1] < 35 && hsl[2] < 25) || hsl[2] < 15;
+
+      // states of the tile
+
+      let isWhiteTile = hslColorGroups.some((x) => isHslWhiteTile(x[0]));
+      let isBlackTile = hslColorGroups.some((x) => isHslBlackTile(x[0]));
+      let isUnknownTile = isWhiteTile && isBlackTile;
+      if (isUnknownTile) isWhiteTile = isBlackTile = false;
+
+      let isBlackPiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) =>
+        isHslBlackPiece(x[0]) && !isHslBlackTile(x[0]) && !isHslWhiteTile(x[0])
+      ).map((x) => x[1]));
+
+      let isWhitePiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) =>
+        isHslWhitePiece(x[0]) && !isHslBlackTile(x[0])
+      ).map((x) => x[1]));
 
       if (isBlackPiece && isWhitePiece) {
         if (isBlackPiece > isWhitePiece) {
@@ -227,48 +244,46 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
           isBlackPiece = false;
         }
       }
-
       isBlackPiece = !!isBlackPiece;
       isWhitePiece = !!isWhitePiece;
 
-      let isBlackTile = hslColorGroups.some((x) => {
-        let hsl = x[0];
-        // check green hue and relatively high saturation
-        if (hsl[0] > 80 && hsl[0] < 140 && hsl[1] > 20) {
-          return true;
-        }
-      });
-      let isWhiteTile = hslColorGroups.some((x) => {
-        let hsl = x[0];
-        // check very low saturation and very high luminance
-        return (hsl[1] < 20 && hsl[2] > 30);
-      });
-      if (isWhiteTile && isBlackTile) {
-        isWhiteTile = false;
-        isBlackTile = false;
-      }
-      let nonTile = !isBlackTile && !isWhiteTile;
+      let nonTile = !isBlackTile && !isWhiteTile && !isUnknownTile;
       let nonPiece = !isBlackPiece && !isWhitePiece;
       let possibleInterference = nonTile || (nonPiece && rgbColorGroups.length > 1)
 
+      // quick access to colors
+      let pieceColors = rgbColorGroups.filter((x) => {
+        let hsl = rgb2hsl(...x[0]);
+        return (isBlackPiece && isHslBlackPiece(hsl)) || (isWhitePiece && isHslWhitePiece(hsl))
+      });
+      let tileColors = rgbColorGroups.filter((x) => {
+        let hsl = rgb2hsl(...x[0]);
+        return (isBlackTile && isHslBlackTile(hsl)) || (isWhiteTile && isHslWhiteTile(hsl))
+      });
+      let mostDominantPieceColor = pieceColors.length > 0 ? pieceColors[0][0] : null;
+      let mostDominantTileColor = tileColors.length > 0 ? tileColors[0][0] : null;
+
+      let mostDominantRGB = rgbColorGroups[0][0];
+      let leastDominantRGB = rgbColorGroups[Math.min(1, rgbColorGroups.length-1)][0];
+
       //Display contents
-      let p1pieceHighlightHint = (isWhitePiece ? "#0df" : (isBlackPiece ? "red" : null));
+      let p1pieceHighlightHint = (isWhitePiece ? "#33d" : (isBlackPiece ? "red" : null));
       let p1borderPieceColor = "1px solid " + (p1pieceHighlightHint || "transparent");
-      let p2fontColor = nonTile ? (p1pieceHighlightHint || "gray") : (isWhitePiece ? "white" : (isBlackPiece ? "black" : "gray"));
-      let p2bgTileColor = (!nonTile && p1pieceHighlightHint) || (isWhiteTile ? "white" : (isBlackTile ? "black": "#870"));
-      let p2borderTileColor = nonTile || possibleInterference ? "1px solid orange" : (
-        "1px solid " + (isWhiteTile ? "white" : (isBlackTile ? "black" : "orange"))
+      let p2fontColor = "#0c0";
+      let p2bgTileColor = (isUnknownTile ? "#999" : (isWhiteTile ? "white" : (isBlackTile ? "black": "#870")));
+      let p2borderTileColor = !isUnknownTile && (nonTile || possibleInterference) ? "1px solid orange" : (
+        "1px solid " + (isWhiteTile ? "white" : (isBlackTile ? "black" : "#ccc"))
       );
 
       let rgb2ColStr = (rgb) => {
         return "rgb(" + rgb.join(",") + ")";
       };
-      ((fgRGB, bgRGB) => {
-        str += "<span style='color: "+fgRGB+"; background-color: "+bgRGB+"; border: " + p1borderPieceColor + ";'>" + y + x + "</span>";
-      })(rgb2ColStr(leastDominantRGB), rgb2ColStr(mostDominantRGB));
+      ((fgVal, bgVal) => {
+        str += "<span style='color: "+fgVal+"; background-color: "+bgVal+"; border: " + p1borderPieceColor + ";'>" + y + x + "</span>";
+      })(rgb2ColStr(mostDominantPieceColor || leastDominantRGB), rgb2ColStr(mostDominantTileColor || mostDominantRGB));
 
-      let adjDiffDescVal = rgbColorGroups.length > 1 ? (rgbColorGroups.length - 1) : ""//adjustedDiff < 10 ? Math.max(0, adjustedDiff).toFixed(1) : Math.floor(adjustedDiff) + "";
-      let label = (isWhitePiece ? "W" : (isBlackPiece ? "B" : "")) + "<sup>" + adjDiffDescVal + "</sup>";
+      let descriptorSubtext = rgbColorGroups.length > (1 + +!nonPiece) ? rgbColorGroups.length : "✔";
+      let label = (isWhitePiece ? "🔵" : (isBlackPiece ? "🔴" : "")) + "<sup>" + descriptorSubtext + "</sup>";
 
       strFin += "<span style='color: " + p2fontColor  + "; background-color: " + p2bgTileColor + "; border: "+p2borderTileColor+";'>" + label + "</span>"
 
@@ -280,15 +295,15 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       }
 
       if ("aceg".indexOf(y) != -1) {
-        if (+x % 2 == 0 && isWhiteTile) {
+        if (+x % 2 == 0 && isWhiteTile || isUnknownTile) {
           chessTilesValid++;
-        } else if (+x % 2 == 1 && isBlackTile) {
+        } else if (+x % 2 == 1 && isBlackTile || isUnknownTile) {
           chessTilesValid++;
         }
       } else {
-        if (+x % 2 == 0 && isBlackTile) {
+        if (+x % 2 == 0 && isBlackTile || isUnknownTile) {
           chessTilesValid++;
-        } else if (+x % 2 == 1 && isWhiteTile) {
+        } else if (+x % 2 == 1 && isWhiteTile || isUnknownTile) {
           chessTilesValid++;
         }
       }

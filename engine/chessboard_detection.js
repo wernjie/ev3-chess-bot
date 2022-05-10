@@ -61,16 +61,15 @@ function findLines(squashed) {
 }
 
 // Global ids used: resultCanvas, sobelCanvas
-function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
+function processLoadedImage(img, resultCanvasElement, sobelCanvas, assumeSquare) {
     var ctx = sobelCanvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
-    // Resize the image
+    // Resize the image to a square of size 512 pixels.
     var internalCanvas = document.createElement('canvas'),
-        width = 512,
-        height = Math.floor((img.height * width) / img.width);
-    if (isNaN(height)) height = 512;
-    // purposefully want a square
+        height = 512,
+        width = Math.floor((img.width * height) / img.height);
+    if (isNaN(width)) width = 512;
     internalCanvas.width = height;
     internalCanvas.height = height;
     var internalCanvasCtx = internalCanvas.getContext('2d')
@@ -80,7 +79,7 @@ function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
 
     // Blur image, then run sobel filters on it.
     // imgData = Filters.getPixels(internalCanvas);
-    var d = Filters.filterImage(Filters.gaussianBlur, internalCanvas, 10); // Blur it slightly.
+    var d = Filters.filterImage(Filters.gaussianBlur, internalCanvas, 15); // Blur it slightly.
     d = Filters.sobel(d);
 
     // Visualize sobel image.
@@ -110,6 +109,16 @@ function processLoadedImage(img, resultCanvasElement, sobelCanvas) {
 
     var deltaX = rightX.idx - ctrX.idx;
     var deltaY = botY.idx - ctrY.idx;
+
+    if (assumeSquare) {
+        // Assume that the chessboard is square.
+        // This will override the previous deltaX and deltaY values with their average.
+        let upper = Math.max(deltaX, deltaY);
+        let lower = Math.min(deltaX, deltaY);
+        let delta = upper - lower;
+        // bias towards upper delta value
+        deltaX = deltaY = upper - delta/4;
+    }
 
     // Assumes ctrX.idx is the center, there are 4 to the left and 4 to the right.
     positionsX = Array(9).fill(0).map((e,i)=>(i-4) * deltaX + ctrX.idx);

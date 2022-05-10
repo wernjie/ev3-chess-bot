@@ -40,6 +40,7 @@ async function init() {
         resetGame();
     }
     resetRobotSignal();
+    toggleAssumeSquareBoardForCamera(true);
     setStatusText('Activating camera analysis...');
 
     console.log(navigator, navigator.mediaDevices, navigator.getUserMedia);
@@ -92,7 +93,7 @@ async function init() {
 
                 image.addEventListener('load', function() {
                     if (!signallingRobotMove) {
-                        processLoadedImage(image, resultCanvasElement, sobelCanvas);
+                        processLoadedImage(image, resultCanvasElement, sobelCanvas, assumeSquareBoardForCamera);
                         let result = locateChessPiecesInCanvas(resultCanvasElement, referenceBlankBoardRawADE);
                         processChessPiecesResult(result);
                     }
@@ -175,7 +176,6 @@ function processReply(response) {
         if (msg[0] == "bestmove") {
             if (!thinkingForPlayer) {
                 (async () => {
-                    setStatusText("AI move " + msg[1], true);
                     robotMove(
                         splitInstSquares(msg[1]),
                         msg[2] == "ponder" ? splitInstSquares(msg[3]) : undefined
@@ -418,6 +418,12 @@ function toggleFullscreen() {
             }
         }
     }
+}
+
+let assumeSquareBoardForCamera = true;
+function toggleAssumeSquareBoardForCamera(value) {
+    assumeSquareBoardForCamera = value !== undefined && value !== null ? (!!value) : !assumeSquareBoardForCamera;
+    document.getElementById("alwaysSquareCropBtn").classList.toggle("active", assumeSquareBoardForCamera);
 }
 
 let torchState = false;
@@ -682,6 +688,7 @@ function processChessPiecesResult(result) {
 
     let boardValidFraction = result.validFraction;
     let boardValid = boardValidFraction > 0.9;
+    let boardNotFound = boardValidFraction < 0.65;
 
     if ((
         (!calibrationMode && objectKeyPairEqual(detectedBoard, cachedDetectedBoardState)) ||
@@ -777,7 +784,11 @@ function processChessPiecesResult(result) {
         if (awaitingRobotMove) {
             setStatusText("AI moving, do not interfere...", true);
         } else {
-            setStatusText("Chessboard not in view", false, true);
+            setStatusText(
+                boardNotFound ?
+                "Chessboard not in view" :
+                "Chessboard blocked", false, true
+            );
         }
         return;
     }
@@ -785,7 +796,7 @@ function processChessPiecesResult(result) {
     if (awaitingRobotMove || awaitingStartPos) {
         progressBarInnerElement.style.width = "0%";
         if (awaitingRobotMove) {
-            setStatusText("AI moving, do not interfere...", true);
+            setStatusText("AI moving, do not interfere...", false);
         } else {
             setStatusText("Waiting for start position...", true, true);
         }
