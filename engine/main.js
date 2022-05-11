@@ -60,19 +60,18 @@ async function queryCameras() {
         let aL = a.label.toLowerCase();
         let bL = b.label.toLowerCase();
         for (let term of ["back", "rear"]) {
-            if (aL.indexOf(term) > -1 && bL.indexOf(term) == -1) {
-                return 1;
+            if (aL.indexOf(term) > -1 && bL.indexOf(term) == -1) { // (term, non-term)
+                return -1; //keep order
+            } else if (aL.indexOf(term) == -1 && bL.indexOf(term) > -1) { // (non-term, term)
+                return 1; //swap order
             }
         }
         for (let term of ["front", "selfie", "facetime"]) {
-            if (aL.indexOf(term) == -1 && bL.indexOf(term) > -1) {
-                return -1;
+            if (aL.indexOf(term) == -1 && bL.indexOf(term) > -1) { // (non-term, term)
+                return -1; //keep order
+            } else if (aL.indexOf(term) > -1 && bL.indexOf(term) == -1) { // (term, non-term)
+                return 1; //swap order
             }
-        }
-        if (aL < bL) {
-            return 1;
-        } else if (aL > bL) {
-            return -1;
         }
         return 0;
     });
