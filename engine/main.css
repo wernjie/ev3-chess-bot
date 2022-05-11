@@ -8,6 +8,18 @@ body {
     color: #fff;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
+.swal-modal {
+    background-color: #111 !important;
+}
+.swal-modal .swal-title, .swal-modal .swal-text {
+    color: #fff !important;
+}
+.swal-modal .swal-footer {
+    background-color: #111 !important;
+}
+.swal-modal .swal-button {
+    background-color: #555 !important;
+}
 #top-preview-container {
     display: flex;
     flex-direction: row;
