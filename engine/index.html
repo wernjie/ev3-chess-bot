@@ -1,6 +1,6 @@
 <html>
     <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, max-width=600px">
         <link rel="stylesheet" href="main.css"/>
         <link rel="stylesheet" href="chessboard.css"/>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -32,8 +32,7 @@
             <button id="fullscreenBtn" onclick="toggleFullscreen()">Fullscreen</button>
             <button id="speechBtn" onclick="toggleSpeech()">Text to Speech</button>
             <button id="torchBtn" onclick="toggleTorch()">Flashlight</button>
-            <button id="activateEngineBtn" onclick="toggleCameraAnalysis()">Camera Analysis</button>
-            <button id="alwaysSquareCropBtn" onclick="toggleAssumeSquareBoardForCamera()">Force Square Crop</button>
+            <button id="toggleCameraBtn" onclick="toggleCamera()">Toggle Camera</button>
         </div>
         <div id="landscape-mode-hint"><b>ev3-chess-bot engine</b><br><br>Please use landscape mode.</div>
         <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>

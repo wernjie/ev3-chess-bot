@@ -1,5 +1,25 @@
 // @ts-check
-//Computes HSL from RGB, https://css-tricks.com/converting-color-spaces-in-javascript/
+// Computes weighted RGB average from two RGB colors and a weight
+function rgbWeightedAvg(rgbColA, rgbColB, abWeightRatio) {
+  if (abWeightRatio === undefined) {
+    abWeightRatio = 0.5;
+  }
+  // obtain squares of values (rgb color is not linear!)
+  let rA = rgbColA[0] * rgbColA[0];
+  let gA = rgbColA[1] * rgbColA[1];
+  let bA = rgbColA[2] * rgbColA[2];
+  let rB = rgbColB[0] * rgbColB[0];
+  let gB = rgbColB[1] * rgbColB[1];
+  let bB = rgbColB[2] * rgbColB[2];
+  // compute weighted average
+  let r = Math.sqrt((rA * abWeightRatio) + (rB * (1 - abWeightRatio)));
+  let g = Math.sqrt((gA * abWeightRatio) + (gB * (1 - abWeightRatio)));
+  let b = Math.sqrt((bA * abWeightRatio) + (bB * (1 - abWeightRatio)));
+  // return result
+  return [r, g, b];
+}
+
+// Computes HSL from RGB, https://css-tricks.com/converting-color-spaces-in-javascript/
 function rgb2hsl(r,g,b) {
   // Make r, g, and b fractions of 1
   r /= 255;
@@ -91,7 +111,7 @@ function hsl2rgb(h,s,l)
 }
 
 //Locates presence of pieces in a 256x256 canvas.
-function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
+function locateChessPiecesInCanvas(canvas) {
   // @ts-ignore the below is provided by filter.js
   let pixelData = Filters.getPixels(canvas);
   if (pixelData.height != pixelData.width || pixelData.height != 24) {
@@ -171,8 +191,8 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
 
 
   let chessList = {};
-  let rawAdeList = {};
   let chessTilesValid = 0;
+  let humanInterferenceCount = 0;
   let calcDetect = document.getElementById("calcdetect");
   let finalDetect = document.getElementById("finaldetect");
   let str = "";
@@ -193,6 +213,7 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
           let dE = deltaE(refRgbColor, existingRgbColor);
           if (dE <= 12) {
             existingColorGroup[1]++;
+            existingColorGroup[0] = rgbWeightedAvg(existingRgbColor, refRgbColor, 1 - 1/existingColorGroup[1]);
             inserted = true;
             break;
           }
@@ -217,10 +238,16 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       let isHslWhiteTile =  (hsl) => ((hsl[0] < 90 || hsl[0] > 140) && hsl[1] < (0.5*Math.abs(hsl[2]-50)+5) && hsl[2] > 70) || hsl[2] > 95;
       // check green hue and relatively high saturation
       let isHslBlackTile =  (hsl) => (hsl[0] > 80 && hsl[0] < 140 && hsl[1] > hsl[2]/2 && hsl[2] > 20 && hsl[2] < 80);
-      // check high luminance and orange hue
-      let isHslWhitePiece = (hsl) => (hsl[0] > 20 && hsl[0] < 80 && hsl[1] > 10 && hsl[2] > 30 && hsl[2] < 90);
-      // check low luminance and saturation
-      let isHslBlackPiece = (hsl) => (hsl[1] < hsl[2]/3 && hsl[2] < 30) || (hsl[1] < 35 && hsl[2] < 25) || hsl[2] < 15;
+      // check high luminance and orange hue, plus not qualified for tile detection
+      let isHslWhitePiece = (hsl) => (
+        (hsl[0] > 20 && hsl[0] < 80 && hsl[1] > 10 && hsl[2] > 30 && hsl[2] < 90) &&
+        !isHslBlackTile(hsl) && !isHslWhiteTile(hsl)
+      )
+      // check low luminance and saturation, plus not qualified for tile detection
+      let isHslBlackPiece = (hsl) => (
+        ((hsl[1] < hsl[2]/3 && hsl[2] < 30) || (hsl[1] < 35 && hsl[2] < 25) || hsl[2] < 15) &&
+        !isHslBlackTile(hsl) && !isHslWhiteTile(hsl)
+      )
 
       // states of the tile
 
@@ -229,13 +256,8 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       let isUnknownTile = isWhiteTile && isBlackTile;
       if (isUnknownTile) isWhiteTile = isBlackTile = false;
 
-      let isBlackPiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) =>
-        isHslBlackPiece(x[0]) && !isHslBlackTile(x[0]) && !isHslWhiteTile(x[0])
-      ).map((x) => x[1]));
-
-      let isWhitePiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) =>
-        isHslWhitePiece(x[0]) && !isHslBlackTile(x[0]) && !isHslWhiteTile(x[0])
-      ).map((x) => x[1]));
+      let isBlackPiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) => isHslBlackPiece(x[0])).map((x) => x[1]));
+      let isWhitePiece = (hslColorGroups.length > 1) && sum(hslColorGroups.filter((x) => isHslWhitePiece(x[0])).map((x) => x[1]));
 
       if (isBlackPiece && isWhitePiece) {
         if (isBlackPiece > isWhitePiece) {
@@ -249,7 +271,18 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
 
       let nonTile = !isBlackTile && !isWhiteTile && !isUnknownTile;
       let nonPiece = !isBlackPiece && !isWhitePiece;
-      let possibleInterference = nonTile || (nonPiece && rgbColorGroups.length > 1)
+
+      let hasNonFatalInterference = nonTile || (nonPiece && rgbColorGroups.length > 1);
+      let hasHumanInterference = nonTile && (nonPiece || isWhitePiece) && hslColorGroups.length <= 2 && hslColorGroups.filter((x) => {
+        // Skin colour detection in HSV color space:
+        // > The skin in channel H is characterized by values between 0 and 50, in the channel S from 0.23 to 0.68 for Asian and Caucasian ethnics.
+        // We use this approximatly in HSL - this should be decent enough.
+        //
+        // Source: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.573.9432&rep=rep1&type=pdf
+        let hsl = x[0];
+        return hsl[0] <= 50 && hsl[1] > 20 && hsl[1] < 70 && hsl[2] > 10 && hsl[2] < 70;
+      }).length === hslColorGroups.length;
+
 
       // quick access to colors
       let pieceColors = rgbColorGroups.filter((x) => {
@@ -271,7 +304,7 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
       let p1borderPieceColor = "1px solid " + (p1pieceHighlightHint || "transparent");
       let p2fontColor = "#0c0";
       let p2bgTileColor = (isUnknownTile ? "#999" : (isWhiteTile ? "white" : (isBlackTile ? "black": "#870")));
-      let p2borderTileColor = !isUnknownTile && (nonTile || possibleInterference) ? "1px solid orange" : (
+      let p2borderTileColor = !isUnknownTile && (nonTile || hasNonFatalInterference) ? "1px solid orange" : (
         "1px solid " + (isWhiteTile ? "white" : (isBlackTile ? "black" : "#ccc"))
       );
 
@@ -282,8 +315,16 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
         str += "<span style='color: "+fgVal+"; background-color: "+bgVal+"; border: " + p1borderPieceColor + ";'>" + y + x + "</span>";
       })(rgb2ColStr(mostDominantPieceColor || leastDominantRGB), rgb2ColStr(mostDominantTileColor || mostDominantRGB));
 
-      let descriptorSubtext = rgbColorGroups.length > (1 + +!nonPiece) ? rgbColorGroups.length : "✔";
+      let descriptorSubtext = rgbColorGroups.length > (1 + +!nonPiece) ? rgbColorGroups.length : "✓";
       let label = (isWhitePiece ? "🔵" : (isBlackPiece ? "🔴" : "")) + "<sup>" + descriptorSubtext + "</sup>";
+
+      if (hasHumanInterference) {
+        label = "H"
+        p2fontColor = "white";
+        p2bgTileColor = "orange";
+        p2borderTileColor = "1px solid orange";
+        humanInterferenceCount++;
+      }
 
       strFin += "<span style='color: " + p2fontColor  + "; background-color: " + p2bgTileColor + "; border: "+p2borderTileColor+";'>" + label + "</span>"
 
@@ -313,5 +354,5 @@ function locateChessPiecesInCanvas(canvas, rawAdeReferenceOffset) {
   }
   calcDetect.innerHTML = str;
   finalDetect.innerHTML = strFin;
-  return {board: chessList, boardRawADE: rawAdeList, validFraction: chessTilesValid/64};
+  return {board: chessList, validFraction: chessTilesValid/64, hasHumanInterference: humanInterferenceCount > 0};
 }

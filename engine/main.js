@@ -5,6 +5,8 @@ let progressBarInnerElement = document.getElementById('progressbar-inner');
 let video = document.getElementById("campreviewfeed");
 let stream;
 
+let toggleCameraBtn = document.getElementById("toggleCameraBtn");
+
 let resultCanvasElement = document.getElementById("camcrop");
 let sobelCanvas = document.getElementById('edgedetect');
 
@@ -25,12 +27,10 @@ let movesSAN = [];
 let promotion_pref = 'q';
 
 /* INIT */
-window.onload = init;
-
-async function init() {
-
+window.onload = async () => {
     sendCmds(["uci"]);
     setDifficulty(10);
+    setStatusText('Loading...');
 
     try {
         let c = JSON.parse(getCookie("cachedGameMoves"));
@@ -40,50 +40,103 @@ async function init() {
         resetGame();
     }
     resetRobotSignal();
-    toggleAssumeSquareBoardForCamera(true);
+
+    // prompt permissions
+    await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+    }).catch(() => {
+        setStatusText('Camera access denied or not available.');
+    });
+    haltCamera();
+};
+
+let cameraDevices = [];
+let selectedCameraIdx = 0;
+let cameraCheckTimeout = undefined;
+async function queryCameras() {
+    cameraDevices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind == "videoinput");
+    cameraDevices.sort((a, b) => {
+        //sort all back cameras to the front, front cameras to the back
+        let aL = a.label.toLowerCase();
+        let bL = b.label.toLowerCase();
+        for (let term of ["back", "rear"]) {
+            if (aL.indexOf(term) > -1 && bL.indexOf(term) == -1) {
+                return 1;
+            }
+        }
+        for (let term of ["front", "selfie", "facetime"]) {
+            if (aL.indexOf(term) == -1 && bL.indexOf(term) > -1) {
+                return -1;
+            }
+        }
+        if (aL < bL) {
+            return 1;
+        } else if (aL > bL) {
+            return -1;
+        }
+        return 0;
+    });
+}
+async function initCamera() {
+
     setStatusText('Activating camera analysis...');
+    progressBarInnerElement.style.width = "50%";
 
     console.log(navigator, navigator.mediaDevices, navigator.getUserMedia);
+    console.log("Camera devices: ", cameraDevices);
 
+    await queryCameras();
     try {
-        console.log("attempting to use back camera...");
+        console.log("attempting to use camera with specifications...");
         stream = await navigator.mediaDevices.getUserMedia({ video: {
             aspectRatio: 1,
-            facingMode: { exact: "environment" }
+            facingMode: cameraDevices.length == 0 ? "environment" : undefined,
+            deviceId: cameraDevices.length > 0 ? cameraDevices[selectedCameraIdx].deviceId : undefined
         }});
     } catch(err) {
-        console.log("falling back camera...");
+        console.log("falling back camera specifications...");
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream = await navigator.mediaDevices.getUserMedia({ video: {
+                deviceId: cameraDevices.length > 0 ? cameraDevices[selectedCameraIdx].deviceId : undefined
+            } });
         } catch (err) {
             console.log("failed to get camera stream");
-            setStatusText('Camera access denied or not available.\nReload page to retry.');
+            setStatusText('Camera access denied or not available.');
             progressBarInnerElement.style.width = "0%";
             return;
         }
     }
-    progressBarInnerElement.style.width = "100%";
+    await queryCameras(); //retry bc permissions may be granted whereas previously its not
 
+    progressBarInnerElement.style.width = "75%";
+
+    if (cameraDevices.length > 0) {
+        setStatusText('Loading ' + cameraDevices[selectedCameraIdx].label + '...');
+    } else {
+        setStatusText('Loading camera...');
+    }
     var canvas = document.createElement("canvas");
     video.autoplay = true;
     video.muted = true;
     video.playsInline = true;
     video.srcObject = stream;
     video.play();
-    video.addEventListener( "loadedmetadata", function (e) {
+    video.onloadedmetadata = function (e) {
         const width = this.videoWidth,
             height = this.videoHeight;
         canvas.width = width;
         canvas.height = height;
 
-        console.log("video dimensions", width, height);
+        progressBarInnerElement.style.width = "100%";
 
+        console.log("Camera stream activated for idx " + selectedCameraIdx);
+        console.log("Found video dimensions", width, height);
+
+        const currentStream = stream;
         function scheduleNextDetection() {
-            let wasEnabled = stream.getTracks()[0].enabled;
-            setTimeout((timeout) => {
-                let isEnabled = stream.getTracks()[0].enabled;
-                if (!isEnabled && !wasEnabled) {
-                    scheduleNextDetection();
+            cameraCheckTimeout = setTimeout((timeout) => {
+                let isEnabled = currentStream === stream && currentStream && currentStream.getTracks()[0].enabled;
+                if (!isEnabled) {
                     return;
                 }
 
@@ -93,32 +146,57 @@ async function init() {
 
                 image.addEventListener('load', function() {
                     if (!signallingRobotMove) {
-                        processLoadedImage(image, resultCanvasElement, sobelCanvas, assumeSquareBoardForCamera);
-                        let result = locateChessPiecesInCanvas(resultCanvasElement, referenceBlankBoardRawADE);
+                        processLoadedImage(image, resultCanvasElement, sobelCanvas, true);
+                        let result = locateChessPiecesInCanvas(resultCanvasElement);
                         processChessPiecesResult(result);
-                    }
-                    if (!isEnabled) {
-                        video.pause();
-                        setStatusText('Camera Analysis PAUSED');
                     }
                     scheduleNextDetection();
                 });
             }, 500);
         }
-        setTimeout(scheduleNextDetection, 1000);
-    }, false);
-    document.getElementById("activateEngineBtn").classList.add("active");
-}
-function toggleCameraAnalysis() {
-    if (stream && video) {
-        let newState = (stream.getTracks()[0].enabled = !stream.getTracks()[0].enabled);
-        if (newState) {
-            video.play();
-            setStatusText('Activating camera analysis...');
-        } else {
-            setStatusText('Deactivating camera analysis...');
+        if (stream) {
+            cameraCheckTimeout = setTimeout(scheduleNextDetection, 300);
         }
-        document.getElementById("activateEngineBtn").classList.toggle("active", newState);
+    };
+    toggleCameraBtn.classList.add("active");
+    toggleCameraBtn.innerText = "Toggle Camera";
+}
+function haltCamera() {
+    if (stream) {
+        for (let track of stream.getTracks()) {
+            track.enabled = false;
+            track.stop();
+        }
+        stream = undefined;
+        video.pause();
+        video.srcObject = null;
+
+        if (cameraCheckTimeout) {
+            clearTimeout(cameraCheckTimeout);
+            cameraCheckTimeout = undefined;
+        }
+    }
+
+    console.log("Camera stream deactivated");
+    setStatusText('Camera is OFF');
+    toggleCameraBtn.classList.remove("active");
+    toggleCameraBtn.innerText = "Enable Camera";
+    document.getElementById("calcdetect").innerHTML = "";
+    document.getElementById("finaldetect").innerHTML = "";
+    sobelCanvas.getContext('2d').clearRect(0, 0, sobelCanvas.width, sobelCanvas.height);
+    resultCanvasElement.getContext('2d').clearRect(0, 0, resultCanvasElement.width, resultCanvasElement.height);
+    document.getElementById("board").classList.remove("zoom");
+}
+function toggleCamera() {
+    if (stream && selectedCameraIdx + 1 >= cameraDevices.length) {
+        haltCamera();
+        selectedCameraIdx = 0;
+    } else if (stream) {
+        haltCamera();
+        selectedCameraIdx++;
+        initCamera();
+    } else {
+        initCamera();
     }
 }
 
@@ -420,26 +498,27 @@ function toggleFullscreen() {
     }
 }
 
-let assumeSquareBoardForCamera = true;
-function toggleAssumeSquareBoardForCamera(value) {
-    assumeSquareBoardForCamera = value !== undefined && value !== null ? (!!value) : !assumeSquareBoardForCamera;
-    document.getElementById("alwaysSquareCropBtn").classList.toggle("active", assumeSquareBoardForCamera);
-}
 
 let torchState = false;
 function setTorch(enabled, silent) {
     if (!stream) {
-        swal("No camera stream detected. Please reload and try again.");
+        swal("No camera stream detected. Enable camera to use flashlight.");
         return;
     }
     if ('ImageCapture' in window) {
         const track = stream.getVideoTracks()[0];
         const imageCapture = new ImageCapture(track)
-        const photoCapabilities = imageCapture.getPhotoCapabilities().then(() => {
-            track.applyConstraints({ advanced: [{torch: enabled}] });
+        imageCapture.getPhotoCapabilities().then(async () => {
+            try {
+                await track.applyConstraints({ advanced: [{torch: enabled}] });
+                torchState = enabled;
+                document.getElementById("torchBtn").classList.toggle("active", enabled);
+            } catch (e) {
+                if (!silent) {
+                    swal("There is no flashlight on this camera.");
+                }
+            }
         });
-        torchState = enabled;
-        document.getElementById("torchBtn").classList.toggle("active", enabled);
     } else if (!silent) {
         swal("Your browser does not support setting flashlight mode. Use Chrome for Android if you need to use flash to light up the chessboard.");
     }
@@ -448,64 +527,19 @@ function toggleTorch() {
     setTorch(!torchState);
 }
 
-function calibrateBlank() {
-    if (!stream) {
-        swal("No camera stream detected. Please reload and try again.");
-        return;
-    }
-    if (calibrationMode) {
-        calibrationMode = false;
-        swal("Cancelled calibration.");
-        return;
-    }
-    let cal = confirm("Please REMOVE ALL chess pieces from the chessboard. When ready, press OK to begin calibration.");
-    if (cal) {
-        cachedDetectedBoardStateConfidence = 0;
-        calibrationMode = "BLANK";
-    }
-}
-function calibratePart() {
-    if (!stream) {
-        swal("No camera stream detected. Please reload and try again.");
-        return;
-    }
-    if (calibrationMode) {
-        calibrationMode = false;
-        swal("Cancelled calibration.");
-        return;
-    }
-    let cal = confirm("This consists of two steps. Step 1: Remove chess pieces on the squares you want to calibrate, then press OK to begin.");
-    if (cal) {
-        cachedDetectedBoardStateConfidence = 0;
-        calibrationMode = "PART_NOPC";
-    }
-}
-
 //
 // Movement processing
 //
 
 let calibrationMode = false;
-let partCalibrationCacheNoPiece = {};
-let partCalibrationCacheHasPiece = {};
 let awaitingStartPos = true;
 let signallingRobotMove = false;
 let awaitingRobotMove = false;
 let possibleUserMove = "";
 let cachedDetectedBoardState = {};
 let cachedDetectedBoardStateConfidence = 0;
-let cachedDetectedBoardRawADE = {};
-let referenceBlankBoardRawADE = {};
 
 
-window.addEventListener("load", function() {
-    try {
-        let c = JSON.parse(getCookie("referenceBlankBoardRawADE"));
-        if (c) referenceBlankBoardRawADE = c;
-    } catch (e) {
-        //
-    }
-});
 let tts;
 let synth = window.speechSynthesis;
 let speakingAllowed = false;
@@ -539,12 +573,14 @@ function objectKeyPairMaxDiff(obj1, obj2) {
 }
 async function sendRobotMoves(moves) {
     awaitingRobotMove = true;
-    await waitMS(500);
+    document.getElementById("board").classList.add("zoom");
+    await waitMS(1000);
     for (let move of moves) {
         let m = splitInstSquares(move);
         await signalMove(m);
     }
     resetRobotSignal();
+    document.getElementById("board").classList.remove("zoom");
 }
 async function signalMove(m) {
     console.log("Signalling robot move message: " + m);
@@ -676,10 +712,6 @@ function processChessPiecesResult(result) {
         } else {
             setStatusText("Game over!", true);
         }
-        if (calibrateMode) {
-            //forcibly reset game on calibration
-            resetGame();
-        }
         progressBarInnerElement.style.width = "100%";
         return;
     }
@@ -687,97 +719,19 @@ function processChessPiecesResult(result) {
     let detectedBoard = result.board;
 
     let boardValidFraction = result.validFraction;
-    let boardValid = boardValidFraction > 0.9;
+    let boardValid = boardValidFraction > 0.9 && !result.hasHumanInterference;
     let boardNotFound = boardValidFraction < 0.65;
 
-    if ((
-        (!calibrationMode && objectKeyPairEqual(detectedBoard, cachedDetectedBoardState)) ||
-        (calibrationMode && objectKeyPairMaxDiff(result.boardRawADE, cachedDetectedBoardRawADE) < 2)
-    ) && boardValid) {
+    if (objectKeyPairEqual(detectedBoard, cachedDetectedBoardState) && boardValid) {
         cachedDetectedBoardStateConfidence++;
         cachedDetectedBoardState = detectedBoard;
-        cachedDetectedBoardRawADE = result.boardRawADE;
     } else {
         cachedDetectedBoardStateConfidence = 0;
         cachedDetectedBoardState = detectedBoard;
-        cachedDetectedBoardRawADE = result.boardRawADE;
     }
 
     const boardStableThreshold = 3;
     let boardStable = cachedDetectedBoardStateConfidence >= boardStableThreshold;
-
-    const calibrationWaitThreshold = 10;
-    if (calibrationMode) {
-        progressBarInnerElement.style.width = cachedDetectedBoardStateConfidence/calibrationWaitThreshold*100 + "%";
-        if (boardValid) {
-            if (boardStable) {
-                if (calibrationMode == "BLANK") {
-                    setStatusText("Calibrating blank chessboard...");
-                } else if (calibrationMode == "PART_NOPC") {
-                    setStatusText("Calibrating empty squares...");
-                } else if (calibrationMode == "PART_WITHPC") {
-                    setStatusText("Calibrating squares with new pieces...");
-                }
-            } else {
-                setStatusText("Calibration interference detected...", false, true);
-            }
-            if (cachedDetectedBoardStateConfidence >= calibrationWaitThreshold) {
-
-                if (calibrationMode == "BLANK") {
-                    calibrationMode = false;
-                    referenceBlankBoardRawADE = result.boardRawADE;
-                    setCookie("referenceBlankBoardRawADE", JSON.stringify(referenceBlankBoardRawADE), 365);
-                    setStatusText("Calibration complete!", true);
-
-                } else if (calibrationMode == "PART_NOPC") {
-                    calibrationMode = "PART_WITHPC";
-                    partCalibrationCacheNoPiece = result.boardRawADE;
-                    cachedDetectedBoardStateConfidence = 0;
-                    setStatusText("Step 1 complete!");
-                    let res = confirm("Step 1 complete! Now, place some chess pieces on the squares you'd like to calibrate, then press OK to continue.");
-                    if (!res) {
-                        calibrationMode = false;
-                        setStatusText("Calibration cancelled!");
-                    }
-
-                } else if (calibrationMode == "PART_WITHPC") {
-                    calibrationMode = false;
-                    if (!partCalibrationCacheNoPiece) {
-                        alert("Error: Unexpected missing calibration data");
-                        return;
-                    }
-                    partCalibrationCacheHasPiece = result.boardRawADE;
-                    let selectedDict = {};
-                    for (let key of Object.keys(partCalibrationCacheNoPiece)) {
-                        let diff = partCalibrationCacheHasPiece[key] - partCalibrationCacheNoPiece[key];
-                        if (Math.abs(diff) >= 1.5) {
-                            selectedDict[key] = Math.min(partCalibrationCacheNoPiece[key], partCalibrationCacheHasPiece[key]);
-                        }
-                    }
-                    partCalibrationCacheNoPiece = undefined;
-                    partCalibrationCacheHasPiece = undefined;
-
-                    if (Object.keys(selectedDict).length == 0) {
-                        setStatusText("Calibration failed!");
-                        alert("Calibration failed! No changes were detected. You should remove all pieces from squares you like to calibrate first, then put them back on the squares on the second step.");
-                        return;
-                    }
-                    let res = confirm("Calibrated " + Object.keys(selectedDict) + ". Confirm?");
-                    if (res) {
-                        referenceBlankBoardRawADE = {...referenceBlankBoardRawADE, ...selectedDict};
-                        setCookie("referenceBlankBoardRawADE", JSON.stringify(referenceBlankBoardRawADE), 365);
-                        setStatusText("Calibration complete!", true);
-                    } else {
-                        setStatusText("Calibration cancelled.");
-                    }
-                }
-            }
-        } else {
-            setStatusText("Waiting for board visibility");
-        }
-        return;
-    }
-
 
     if (!boardValid) {
         progressBarInnerElement.style.width = "0%";
@@ -787,7 +741,8 @@ function processChessPiecesResult(result) {
             setStatusText(
                 boardNotFound ?
                 "Chessboard not in view" :
-                "Chessboard blocked", false, true
+                "Chessboard blocked"
+                , false, true
             );
         }
         return;
@@ -798,7 +753,8 @@ function processChessPiecesResult(result) {
         if (awaitingRobotMove) {
             setStatusText("AI moving, do not interfere...", false);
         } else {
-            setStatusText("Waiting for start position...", true, true);
+            setStatusText("Please match starting position...", true, true);
+            document.getElementById("board").classList.add("zoom");
         }
 
         let countDiff = 0;
@@ -822,6 +778,9 @@ function processChessPiecesResult(result) {
 
         if (awaitingRobotMove) {
             setStatusText("AI move complete", true, true);
+        } else {
+            setStatusText("Start position matched");
+            document.getElementById("board").classList.remove("zoom");
         }
 
         awaitingRobotMove = false;
@@ -1020,6 +979,7 @@ function playerMove(m, ignore) {
     return true;
 }
 async function robotMove(m, ponderM) {
+
     m = splitInstSquares(m);
     let captures = moveHasCapture(m);
     let promotion = moveHasPromotion(m);
@@ -1055,7 +1015,13 @@ async function robotMove(m, ponderM) {
     moves.push(m.join(""));
     movesSAN.push(SAN);
     updateMovesListDisplay();
-    board.position(chess.fen())
+    let fen = chess.fen();
+    setTimeout(() => {
+        //async update - check if state is still valid before updating
+        if (fen == chess.fen()) {
+            board.position(fen)
+        }
+    }, 300);
 
     console.log("Robot moved " + m);
     console.log(chess.ascii());
