@@ -577,6 +577,7 @@ async function sendRobotMoves(moves) {
     for (let move of moves) {
         let m = splitInstSquares(move);
         await signalMove(m);
+        await waitMS(1000);
     }
     resetRobotSignal();
     document.getElementById("board").classList.remove("zoom");
