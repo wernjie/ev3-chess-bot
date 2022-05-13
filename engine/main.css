@@ -104,9 +104,9 @@ body {
     width: 150px;
     transition: transform 150ms;
 }
-/*#board.zoom {
+#board.zoom {
     transform: translate(30px, -30px) scale(1.3);
-}*/
+}
 
 #robotsignal {
     display: inline-block;
