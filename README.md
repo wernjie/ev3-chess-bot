@@ -10,21 +10,33 @@ Message-passing done via flashing the screen and using an NXT light sensor to re
 
 Available at: [https://wernjie.github.io/ev3-chess-bot/engine/](https://wernjie.github.io/ev3-chess-bot/engine/)
 
-Run the webapp on a phone in landscape mode. Initiate full screen mode if possible. Mount it with the camera pointing to the chessboard, perfectly parallel,
-and taking up most of the viewfinder with edges in view. Automatic cropping and normalisation of the camera footage will take over,
-and you should see a perfect low resolution checkerboard image from the camera shown in the second preview from top left.
+**Get it up and running:**
+1. Run the webapp on a phone in landscape mode. 
+2. Initiate full screen mode if possible. 
+3. Ensure screen is at ***full brightness*** for best detection performance by the *chess_reader* EV3 later.
+4. Enable the camera (tap "Enable Camera" and "Toggle Camera" until your desired one).
+5. Mount it with the camera pointing to a white-green chessboard.
+6. Ensure the camera sees the entire chessboard in parallel, and is not rotated.
+7. Automatic cropping, calibration and normalisation of the camera footage will take over.
 
-You may calibrate an empty chessboard by tapping **Calibrate Full Board** and mounting the phone in the
-same position and lighting conditions as you would be planning to permanently mount it for chess
-piece movement detection. This ensures highest possible accuracy.
+While the app detects chess pieces best with uniform lighting, the app can automatically calibrate against shadows spanned completely horizontally, so not to worry about that.
 
-If you want to recalibrate small portions of the chessboard midgame, you may also find the partial
-**Calibrate Selected...** useful. Follow the instructions for details.
+**Understanding the top indicators (left-to-right):**
+1. Camera view with auto-crop detection overlay.
+2. Auto-cropped output of the camera.
+3. Normalised detection. Highlights background colour and piece colours found.
+4. Detection interpretation preview:
 
-If possible, utilise uniform lighting for best performance, or if not available, use your phone's
-flashlight option (can only be enabled using Chrome on Android or browsers with similar engines).
-
-Please ensure screen is at ***full brightness*** for best detection performance by the *chess_reader* EV3.
+    | Indicator | Interpretation |
+    | --- | --- |
+    | 🔴 Red circle | Black chess piece (Black) |
+    | 🔵 Blue circle | White chess piece (Beige) |
+    | Dark background | Dark chess tile (Green) |
+    | Light background | Light chess tile (White) | 
+    | Gray background | Chess tile (but detected mix of Green and White) |
+    | Orange background | No tile detected |
+    | Orange background w/ H | Human hand covers tile completely |
+    | Orange outline | Current interpretation is uncertain |
 
 **Important caveats as of writing:**
 - Chrome on Android required for toggling flash.
@@ -72,7 +84,7 @@ Range of motion available from ***row 1*** to ***95° motor rotation past "row 9
 Run program `phone-reader` and ensure successful connection to the two other EV3s. Asynchronously reads screen flashes from phone and interprets as movement.
 
 - Press Center button to calibrate black levels at any time.
-- Press Left button to forcibly terminate all pending requests and request movement to top left (1,0) position, then terminate `phone-reader`. Useful in event of corrupted transmission.
+- Press Left button to forcibly terminate all pending requests and request movement to top left (1,0) position, then terminate `phone-reader`. Useful in event of corrupted transmission. If this does not work, you'll need to manually terminate all robot programs.
 - Press Right button to send an arbitrary request to perform move b7g3 or g7b3 to test movement accuracy. Warning: Only initiate when idle or may cause transmission corruption.
 
 ---
@@ -102,15 +114,26 @@ Currently, a maximum of two moves in total can be queued asynchronously to allow
 <br/>
 
 ### Piece Detection Details
-Uses average ∆E of pixels as a metric for detecting the presence of a piece.
-(with the assumption that chess pieces have a different hue from the chessboard, which is not uncommon).
+For each row of horizontal pixels, normalize them in HSL so that the max luminosity must be 100% (implicitly calibrates against brightness, and any horizontal-spanning shadows).
 
-∆E measures the distance between two colours, commonly used for measuring monitor colour accuracy \[[Details](http://zschuessler.github.io/DeltaE/learn)\].
+For each 3x3 pixel square tile, group the 9 pixels by similar colours (grouping those where ∆E ≤ 12).
 
-For our case, the higher the ∆E value for a particular square tile, the more likely there is for a colour difference and thus presence of a piece.
-This is especially effective for detecting black pieces on dark tiles with slight hue differences.
+∆E measures the perceived distance between two colours, commonly used for measuring monitor colour accuracy \[[Details](http://zschuessler.github.io/DeltaE/learn)\].
 
-Piece colour detection is then done with luminosity thresholds at the center of the square tile.
+For each unique colour, consider:
+- presence of green hue with average luminosity as a dark tile.
+- presence of white colour with high luminosity as a light tile.
+- presence of orange hue with average luminosity as a white piece.
+- presence of dark colour with low luminosity as a black piece.
+- presence of ONLY human skin hue as a tile completely blocked by human intervention.
+
+Tie-breakers:
+- Chess tile colours are not tie-breaked. If both tile colours are found, they are both considered to be true.
+- Chess piece colours are tie-breaked by whichever colour is found more frequently by pixel count in the given square tile.
+- Colours already classified as chess tiles won't also be classified as chess pieces.
+- Human skin hue is not considered at all if the square tile is already classified as a chess tile or piece.
+
+The exact piece is assumed to be matching a standard chess config, and that the same pieces have been moving since the starting position via legal chess moves.
 
 <br/>
 
