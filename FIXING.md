@@ -14,7 +14,7 @@ This may not be fatal as the app can try to auto-compensate for them. However, i
 **Symptom:**
 | Cropped Output | Engine Interpretation | Problem | Resolution |
 | --- | --- | --- | --- |
-| | | Chessboard cannot be cropped correctly as it is rotated (notice corner(s) have tiles not correctly aligned) | Rotate the chessboard slightly until you get a fix (in this case, rotate camera counterclockwise) |
+| | | Chessboard cannot be cropped correctly as it is rotated (notice corner(s) have tiles not correctly aligned) | Rotate the chessboard slightly until you get a fix (in this case, rotate camera counterclockwise along x-axis) |
 | | | Chessboard is cropped too far in (notice the bottom row of tiles being shrunken to smaller than a 3x3 pixel square) | Move camera slightly "towards" the area that's cropped off (in this case, move camera downwards) |
 | | | Chessboard is cropped too far out (notice a line of non-chessboard pixels spanning through the right edge) | Move camera slightly "away" from the error (in this case, move camera left) |
 
