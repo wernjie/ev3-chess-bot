@@ -372,7 +372,7 @@ function locateChessPiecesInCanvas(canvas) {
   calcDetect.innerHTML = str;
   finalDetect.innerHTML = strFin;
 
-  // compute suggestions
+  // compute alignment suggestions
   let suggestion = undefined;
   let unknownTL = 0;
   let unknownTR = 0;
@@ -409,17 +409,24 @@ function locateChessPiecesInCanvas(canvas) {
       }
     }
   }
-  if (chessTilesValid > 56 && centerTilesUnknown <= 4) {
-    if (unknownTL >= 4 || unknownTR >= 4 || unknownBL >= 4 || unknownBR >= 4) {
-      suggestion = "WARNING: Chessboard appears rotated/tilted\nPlease fix camera rotation"
-    } else if (unknownL >= 5) {
-      suggestion = "WARNING: Chessboard cropped at left side\nPlease shift camera left"
-    } else if (unknownR >= 5) {
-      suggestion = "WARNING: Chessboard cropped at right side\nPlease shift camera right"
-    } else if (unknownT >= 5) {
-      suggestion = "WARNING: Chessboard cropped at top side\nPlease shift camera upwards"
-    } else if (unknownB >= 5) {
-      suggestion = "WARNING: Chessboard cropped at bottom side\nPlease shift camera downwards"
+  let unknownMinorCornerBits = +(unknownTL >= 1)*0b1000 + +(unknownTR >= 1)*0b100 + +(unknownBR >= 1)*0b10 + +(unknownBL >= 1)*1
+  let unknownMajorCornerBits = +(unknownTL >= 4)*0b1000 + +(unknownTR >= 4)*0b100 + +(unknownBR >= 4)*0b10 + +(unknownBL >= 4)*1
+  let unknownSideBits   = +(unknownL  >= 5)*0b1000 + +(unknownT  >= 5)*0b100 + +(unknownR  >= 5)*0b10 + +(unknownB  >= 5)*1
+  if (chessTilesValid > 50) {
+    if (centerTilesUnknown > 4) {
+      suggestion = "Chessboard detection may be faulty"
+    } else if ((unknownMinorCornerBits ^ 0b1111) == 0 || unknownMajorCornerBits) {
+      suggestion = "Chessboard appears rotated/tilted\nPlease adjust camera angle"
+    } else if ((unknownSideBits ^ 0b1000) == 0) {
+      suggestion = "Chessboard cropped at left side\nPlease shift camera left"
+    } else if ((unknownSideBits ^ 0b0100) == 0) {
+      suggestion = "Chessboard cropped at top side\nPlease shift camera upwards"
+    } else if ((unknownSideBits ^ 0b0010) == 0) {
+      suggestion = "Chessboard cropped at right side\nPlease shift camera right"
+    } else if ((unknownSideBits ^ 0b0001) == 0) {
+      suggestion = "Chessboard cropped at bottom side\nPlease shift camera downwards"
+    } else if (unknownSideBits) {
+      suggestion = "Chessboard is not aligned\nPlease adjust camera"
     }
   }
 

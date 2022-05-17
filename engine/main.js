@@ -785,12 +785,12 @@ function processChessPiecesResult(result) {
     }
 
     let adjustmentWarning = result.hasAdjustmentSuggestion;
-    setWarningText(adjustmentWarning);
+    setWarningText(adjustmentWarning ? ("WARNING: " + adjustmentWarning) : undefined);
 
     let detectedBoard = result.board;
 
     let boardValidFraction = result.validFraction;
-    let boardValid = boardValidFraction > 0.9 && !result.hasHumanInterference;
+    let boardValid = boardValidFraction > 0.85 && !result.hasHumanInterference;
     let boardNotFound = boardValidFraction < 0.65;
 
     if (objectKeyPairEqual(detectedBoard, cachedDetectedBoardState) && boardValid) {
