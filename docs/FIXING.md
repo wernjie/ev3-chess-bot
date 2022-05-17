@@ -12,6 +12,7 @@ Observe the cropped output from the camera and the engine's final detection resu
 This may not be fatal as the app can try to auto-compensate for them. However, it is not perfect, and if you encounter problems A2-A5, you may have to resolve this issue.
 
 **Symptom:**
+
 | Cropped Camera Output | Camera Interpretation | Problem | Resolution |
 | --- | --- | --- | --- |
 | ![Image](assets/error-rotate-camcrop.png) | ![Image](assets/error-rotate-interp.png) | Chessboard cannot be cropped correctly as it is rotated (notice corner(s) have tiles not correctly aligned) | Rotate the chessboard slightly until you get a fix |
