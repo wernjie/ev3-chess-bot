@@ -33,7 +33,7 @@ While the app detects chess pieces best with uniform lighting, the app can autom
 ![UI Image](docs/assets/interface.png)
 
 1. Camera View (with Auto-Crop Region Overlay).
-2. Auto-Cropped Camera Outp⬜️ut.
+2. Auto-Cropped Camera Output.
 3. Normalised Detection Colours.
 4. Camera Output Interpretation Preview.\*
 5. Primary Status Message

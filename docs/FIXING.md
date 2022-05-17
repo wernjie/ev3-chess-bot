@@ -12,11 +12,11 @@ Observe the cropped output from the camera and the engine's final detection resu
 This may not be fatal as the app can try to auto-compensate for them. However, it is not perfect, and if you encounter problems A2-A5, you may have to resolve this issue.
 
 **Symptom:**
-| Cropped Output | Engine Interpretation | Problem | Resolution |
+| Cropped Camera Output | Camera Interpretation | Problem | Resolution |
 | --- | --- | --- | --- |
-| | | Chessboard cannot be cropped correctly as it is rotated (notice corner(s) have tiles not correctly aligned) | Rotate the chessboard slightly until you get a fix (in this case, rotate camera counterclockwise along x-axis) |
-| | | Chessboard is cropped too far in (notice the bottom row of tiles being shrunken to smaller than a 3x3 pixel square) | Move camera slightly "towards" the area that's cropped off (in this case, move camera downwards) |
-| | | Chessboard is cropped too far out (notice a line of non-chessboard pixels spanning through the right edge) | Move camera slightly "away" from the error (in this case, move camera left) |
+| ![Image](assets/error-rotate-camcrop.png) | ![Image](assets/error-rotate-interp.png) | Chessboard cannot be cropped correctly as it is rotated (notice corner(s) have tiles not correctly aligned) | Rotate the chessboard slightly until you get a fix |
+| Image Unavailable | Image Unavailable | Chessboard is cropped too far in (e.g. tiles at the edge are smaller than 3x3 pixel squares) | Move camera slightly "towards" the area that's cropped off |
+| Image Unavailable | Image Unavailable | Chessboard is cropped too far out (e.g. a line of non-chessboard pixels spanning through an edge) | Move camera slightly "away" from the error |
 
 In some cases, any of the above symptoms can also appear if the phone screen (and thus camera) is not parallel to the chessboard surface. Ensure that is the case before checking for other issues.
 
