@@ -4,6 +4,13 @@ Chess Bot Client Webapp to interface intepreted camera and Stockfish results wit
 
 Message-passing done via flashing the screen and using an NXT light sensor to recognise the data.
 
+**JUMP TO:**
+- [Setup, Installation and Usage](#setup-installation-and-usage)
+- [Technical Implementation Details](docs/TECHNICAL.md)
+- [Resolving Common Issues](docs/FIXING.md)
+
+---
+
 ## Setup, Installation and Usage
 
 ### (1/2) Chess Engine and Message Passing
@@ -20,24 +27,32 @@ Instantly available at: [https://wernjie.github.io/ev3-chess-bot/engine/](https:
 7. Automatic cropping, calibration and normalisation of the camera footage will take over.
 8. Continue setting up the EV3 (see part 2/2).
 
-While the app detects chess pieces best with uniform lighting, the app can automatically calibrate against shadows spanned completely horizontally, so not to worry about that.
+While the app detects chess pieces best with uniform lighting, the app can automatically calibrate against shadows that span at least 2 tiles horizontally, so not to worry about that.
 
-**Understanding the top indicators (left-to-right):**
-1. Camera view with auto-crop detection overlay.
-2. Auto-cropped output of the camera.
-3. Normalised detection. Highlights background colour and piece colours found.
-4. Detection interpretation preview.\*
+**Understanding the UI:**
+![UI Image](docs/assets/interface.png)
 
-\*Understanding the interpretations by the chess engine:
+1. Camera View (with Auto-Crop Region Overlay).
+2. Auto-Cropped Camera Outp⬜️ut.
+3. Normalised Detection Colours.
+4. Camera Output Interpretation Preview.\*
+5. Primary Status Message
+6. Current Chessboard Layout
+7. Light Transmission Region
+8. Action Buttons
+9. Current Moves List
+10. Stockfish Evaluation Bar
+
+\*Understanding the interpretations from camera footage:
 
 | Indicator | Interpretation |
 | --- | --- |
-| 🔴 Red circle | Black chess piece (Black) |
-| 🔵 Blue circle | White chess piece (Beige) |
-| Dark background | Dark chess tile (Green) |
-| Light background | Light chess tile (White) |
-| Gray background | Chess tile (but detected mix of Green and White) |
-| Orange background | No tile detected |
+| 🔴 Red circle | Black chess piece (Black piece detected) |
+| 🔵 Blue circle | White chess piece (Beige piece detected) |
+| ⬛️ Dark background | Dark chess tile (Green tile detected) |
+| ⬜️ Light background | Light chess tile (White tile detected) |
+| ℹ️ Gray background | Chess tile (but detected mix of Green and White) |
+| 🟧 Orange background | No tile detected |
 | Orange background w/ H | Human hand covers tile completely |
 | Orange outline | Current interpretation is uncertain |
 
@@ -124,8 +139,8 @@ This asynchronously reads screen flashes from phone and interprets as movement.
 
 ## Technical Implementation Details
 
-Refer to [TECHNICAL.md](TECHNICAL.md).
+Refer to [TECHNICAL.md](docs/TECHNICAL.md).
 
 ## Resolving Common Issues
 
-Refer to [FIXING.md](FIXING.md).
+Refer to [FIXING.md](docs/FIXING.md).
