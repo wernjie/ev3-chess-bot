@@ -159,25 +159,32 @@ function locateChessPiecesInCanvas(canvas) {
 
   // Scale luminance to maximise 0-100
   for (let x of xmap) {
-    //scale by every row of pixels
+    // for every tile vertically (1-8)
     for (let inSquareOffset of [0,3,6]) {
-      let maxLuminanceVal = 0.1;
-      for (let y of ymap) {
-        let sq = y + x;
-        for (let i = inSquareOffset; i < inSquareOffset + 3; i++) {
-          let hsl = hslMap[sq][i];
-          let l = hsl[2];
-          if (l > maxLuminanceVal) {
-            maxLuminanceVal = l;
+      // scale by considering every row of pixels separately
+      // in the 3x3 grid
+      for (let ymapPart of ["ab", "cd", "ef", "gh"]) {
+        // consider for every 2 adjacent tiles horizontally (a-h)
+
+        // scale to max luminance
+        let maxLuminanceVal = 0.1;
+        for (let y of ymapPart) {
+          let sq = y + x;
+          for (let i = inSquareOffset; i < inSquareOffset + 3; i++) {
+            let hsl = hslMap[sq][i];
+            let l = hsl[2];
+            if (l > maxLuminanceVal) {
+              maxLuminanceVal = l;
+            }
           }
         }
-      }
-      for (let y of ymap) {
-        let sq = y + x;
-        for (let i = inSquareOffset; i < inSquareOffset + 3; i++) {
-          let hsl = hslMap[sq][i];
-          hsl[2] = hsl[2] / maxLuminanceVal * 100;
-          hslMap[sq][i] = hsl;
+        for (let y of ymapPart) {
+          let sq = y + x;
+          for (let i = inSquareOffset; i < inSquareOffset + 3; i++) {
+            let hsl = hslMap[sq][i];
+            hsl[2] = hsl[2] / maxLuminanceVal * 100;
+            hslMap[sq][i] = hsl;
+          }
         }
       }
     }
@@ -190,7 +197,8 @@ function locateChessPiecesInCanvas(canvas) {
 
 
 
-  let chessList = {};
+  let piecesList = {};
+  let tilesList = {};
   let chessTilesValid = 0;
   let humanInterferenceCount = 0;
   let calcDetect = document.getElementById("calcdetect");
@@ -235,12 +243,12 @@ function locateChessPiecesInCanvas(canvas) {
 
       // -- helper HSL color checks --
       // check blue hue, very low saturation and very high luminance
-      let isHslWhiteTile =  (hsl) => ((hsl[0] < 90 || hsl[0] > 140) && hsl[1] < (0.5*Math.abs(hsl[2]-50)+5) && hsl[2] > 70) || hsl[2] > 95;
+      let isHslWhiteTile =  (hsl) => ((hsl[0] < 90 || hsl[0] > 140) && hsl[1] < (0.4*Math.abs(hsl[2]-50)+5) && hsl[2] > 70) || ((hsl[0] > 70 || hsl[0] < 30) && hsl[2] > 95);
       // check green hue and relatively high saturation
       let isHslBlackTile =  (hsl) => (hsl[0] > 80 && hsl[0] < 140 && hsl[1] > hsl[2]/2 && hsl[2] > 20 && hsl[2] < 80);
       // check high luminance and orange hue, plus not qualified for tile detection
       let isHslWhitePiece = (hsl) => (
-        (hsl[0] > 20 && hsl[0] < 80 && hsl[1] > 10 && hsl[2] > 30 && hsl[2] < 90) &&
+        (hsl[0] > 20 && hsl[0] < 80 && hsl[1] > 10 && hsl[2] > 30) &&
         !isHslBlackTile(hsl) && !isHslWhiteTile(hsl)
       )
       // check low luminance and saturation, plus not qualified for tile detection
@@ -330,9 +338,18 @@ function locateChessPiecesInCanvas(canvas) {
 
       //Track piece position and valid tiles
       if (isWhitePiece) {
-        chessList[y+x] = "W";
+        piecesList[y+x] = "W";
       } else if (isBlackPiece) {
-        chessList[y+x] = "B";
+        piecesList[y+x] = "B";
+      }
+      if (hasHumanInterference) {
+        tilesList[y+x] = "H";
+      } else if (isUnknownTile) {
+        tilesList[y+x] = "X"
+      } else if (isWhiteTile) {
+        tilesList[y+x] = "W"
+      } else if (isBlackTile) {
+        tilesList[y+x] = "B"
       }
 
       if ("aceg".indexOf(y) != -1) {
@@ -354,5 +371,57 @@ function locateChessPiecesInCanvas(canvas) {
   }
   calcDetect.innerHTML = str;
   finalDetect.innerHTML = strFin;
-  return {board: chessList, validFraction: chessTilesValid/64, hasHumanInterference: humanInterferenceCount > 0};
+
+  // compute suggestions
+  let suggestion = undefined;
+  let unknownTL = 0;
+  let unknownTR = 0;
+  let unknownBL = 0;
+  let unknownBR = 0;
+  let unknownL = 0;
+  let unknownR = 0;
+  let unknownT = 0;
+  let unknownB = 0;
+  let centerTilesUnknown = 0;
+  for (let x of xmap) {
+    for (let y of ymap) {
+      let sq = y + x;
+      if (tilesList[sq] != "X") continue;
+      if (y == "a") unknownL++;
+      if (y == "h") unknownR++;
+      if (x == "8") unknownT++;
+      if (x == "1") unknownB++;
+      if ("abc".indexOf(y) != -1) {
+        if (+x <= 3) {
+          unknownBL++;
+        } else if (+x >= 6) {
+          unknownTL++;
+        }
+      } else if ("fgh".indexOf(y) != -1) {
+        if (+x <= 4) {
+          unknownBR++;
+        } else if (+x >= 6) {
+          unknownTR++;
+        }
+      }
+      if (+x >= 3 && +x <= 6 && "cdef".indexOf(y) != -1) {
+        centerTilesUnknown++;
+      }
+    }
+  }
+  if (chessTilesValid > 56 && centerTilesUnknown <= 4) {
+    if (unknownTL >= 4 || unknownTR >= 4 || unknownBL >= 4 || unknownBR >= 4) {
+      suggestion = "WARNING: Chessboard appears rotated/tilted\nPlease fix camera rotation"
+    } else if (unknownL >= 5) {
+      suggestion = "WARNING: Chessboard cropped at left side\nPlease shift camera left"
+    } else if (unknownR >= 5) {
+      suggestion = "WARNING: Chessboard cropped at right side\nPlease shift camera right"
+    } else if (unknownT >= 5) {
+      suggestion = "WARNING: Chessboard cropped at top side\nPlease shift camera upwards"
+    } else if (unknownB >= 5) {
+      suggestion = "WARNING: Chessboard cropped at bottom side\nPlease shift camera downwards"
+    }
+  }
+
+  return {board: piecesList, tiles: tilesList, validFraction: chessTilesValid/64, hasAdjustmentSuggestion: suggestion, hasHumanInterference: humanInterferenceCount > 0};
 }

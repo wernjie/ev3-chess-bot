@@ -594,6 +594,7 @@ async function signalMove(m) {
     } else {
         setStatusText("AI moving " + from + to, true);
     }
+    setWarningText(undefined);
 
     let val1 = "abcdefgh".indexOf(from[0]) + 1;
     let val2 = 9 - from[1];
@@ -658,8 +659,19 @@ function resetRobotSignal() {
     robotSignalElement.style.backgroundColor = "black";
 }
 
+function setWarningText(text) {
+    let lines = text ? ("" + text).split("\n") : [];
+    let ele = statusTextElement.getElementsByClassName("warntext")[0];
+    ele.innerHTML = "";
+    for (let line of lines) {
+        ele.append(document.createTextNode(line))
+        ele.append(document.createElement("br"))
+    }
+    if (ele.children.length > 0) ele.children[ele.children.length - 1].remove();
+    statusTextElement.getElementsByClassName("warntext")[0].classList.toggle("hidden", !text);
+}
 function setStatusText(text, speak, interrupt) {
-    statusTextElement.innerText = text;
+    statusTextElement.getElementsByClassName("text")[0].innerText = text;
     if (speak || interrupt) {
         speakText(speak ? text : undefined, interrupt);
     }
@@ -716,6 +728,9 @@ function processChessPiecesResult(result) {
         return;
     }
 
+    let adjustmentWarning = result.hasAdjustmentSuggestion;
+    setWarningText(adjustmentWarning);
+
     let detectedBoard = result.board;
 
     let boardValidFraction = result.validFraction;
@@ -738,12 +753,9 @@ function processChessPiecesResult(result) {
         if (awaitingRobotMove) {
             setStatusText("AI moving, do not interfere...", true);
         } else {
-            setStatusText(
-                boardNotFound ?
+            setStatusText(boardNotFound ?
                 "Chessboard not in view" :
-                "Chessboard blocked"
-                , false, true
-            );
+                "Chessboard is blocked", false, true);
         }
         return;
     }
@@ -752,6 +764,9 @@ function processChessPiecesResult(result) {
         progressBarInnerElement.style.width = "0%";
         if (awaitingRobotMove) {
             setStatusText("AI moving, do not interfere...", false);
+            if (!adjustmentWarning && boardStable) {
+                setWarningText("If AI doesn't move " + moves[moves.length - 1] + ", please fix it manually")
+            }
         } else {
             setStatusText("Please match starting position...", true, true);
             document.getElementById("board").classList.add("zoom");
@@ -782,6 +797,7 @@ function processChessPiecesResult(result) {
             setStatusText("Start position matched");
             document.getElementById("board").classList.remove("zoom");
         }
+        setWarningText(undefined);
 
         awaitingRobotMove = false;
         awaitingStartPos = false;
@@ -826,9 +842,11 @@ function processChessPiecesResult(result) {
     if (whiteLost.length != whiteGain.length) {
         console.log("white inconsistency detected: " + whiteLost + " to " + whiteGain);
         if (whiteLost.length > whiteGain.length) {
-            setStatusText("Invalid move - missing white piece(s) within " + whiteLost);
+            setStatusText("Invalid move - missing white piece(s)");
+            if (!warning) setWarningText("See: " + whiteLost);
         } else {
-            setStatusText("Invalid move - extra white piece(s) within " + whiteGain);
+            setStatusText("Invalid move - extra white piece(s)");
+            if (!warning) setWarningText("See: " + whiteGain);
         }
         speakText("Invalid move");
         possibleUserMove = "";
@@ -837,11 +855,14 @@ function processChessPiecesResult(result) {
     if (blackGain.length > 0 || blackLost.length >= 2) {
         console.log("non-white legal move detected: " + whiteLost + " to " + whiteGain + "; " + blackLost + " to " + blackGain);
         if (blackLost.length == 0) {
-            setStatusText("Invalid move - unexpected black piece(s) gain: " + blackGain);
+            setStatusText("Invalid move - unexpected black piece(s) gain");
+            if (!warning) setWarningText("See: " + blackGain);
         } else if (blackGain.length == 0) {
-            setStatusText("Invalid move - unexpected black pieces removed: " + blackLost);
+            setStatusText("Invalid move - unexpected black pieces removed");
+            if (!warning) setWarningText("See: " + blackLost);
         } else {
-            setStatusText("Invalid move - unexpected black pieces moved: " + blackLost + " to " + blackGain);
+            setStatusText("Invalid move - unexpected black pieces moved");
+            if (!warning) setWarningText("See: " + blackLost + " -> " + blackGain);
         }
         speakText("Invalid move");
 
@@ -906,7 +927,7 @@ function processChessPiecesResult(result) {
 
     if (move == "") {
         console.log("non-valid white move detected: " + whiteLost + " to " + whiteGain + "; " + blackLost + " to " + blackGain);
-        setStatusText("Illegal move - too many pieces moved at once");
+        setStatusText("Illegal move - too many pieces moved");
         speakText("Illegal move");
         possibleUserMove = "";
         return;
@@ -921,7 +942,8 @@ function processChessPiecesResult(result) {
             possibleUserMove = "";
         } else {
             if (chess.in_check()) {
-                setStatusText("Illegal move " + move + "; currently in check", true);
+                setStatusText("Illegal move " + move, true);
+                if (!warning) setWarningText("You are currently in check!");
             } else {
                 setStatusText("Illegal move " + move, true);
             }
