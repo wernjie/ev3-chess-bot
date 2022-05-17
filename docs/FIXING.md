@@ -5,7 +5,7 @@ How to resolve common issues.
 ---
 ## Chess Engine Webapp
 
-### A1. Chessboard detection warped/disrupted
+### A1. Chessboard detection misaligned/warped/disrupted
 
 Observe the cropped output from the camera and the engine's final detection results to diagnose the issue.
 
@@ -27,22 +27,27 @@ If occuring occasionally:
 - Ensure nobody has their hand in front of the camera.
 - Ensure nobody is disrupting the view with shadows.
 
-If fluctuating or displayed persistently:
+If fluctuating repeatedly or displayed persistently:
 - Ensure chessboard detection is not warped or disrupted (see point A1).
+- Identify possible piece detection issues (see point A3 and A4).
+- If you believe it's detecting the pieces correctly for at least 70% of the time, press "Skip Verification" to try to bypass interference checks once.
 
 ### A3. Piece(s) NOT detected or is detected of the wrong colour
 
 - Ensure the piece is in the square. If it already is, ensure it is in the centre.
 - Ensure chessboard detection is not warped or disrupted (see point A1).
+- Minimise shadows at the regions if possible.
 
 ### A4. Ghost piece(s) detected
 
 Singular ghost piece:
 - Ensure neighbouring pieces are not too close to the edge of the square.
 - Ensure chessboard detection is not warped or disrupted (see point A1).
+- Minimise shadows at the region if possible.
 
 Multiple ghost pieces:
 - Ensure chessboard detection is not warped or disrupted (see point A1).
+- Minimise shadows at the regions if possible.
 
 ### A5. "Chessboard not in view"
 
@@ -67,8 +72,8 @@ If you are certain the start position has been matched:
 - Ensure that the webapp sees the AI's move completed successfully before the player makes a move. This means waiting for the robot to fully back up.
 
 If the EV3s have finished their move:
-- Ensure it's correct by matching the diagram shown on the bottom left. If not, you'll need to correct it manually.
-- Ensure the player has not made the next move. If so, you'll have to first undo the move, let the webapp proceed till it says "Waiting for player move" before redoing the move.
+- Ensure the EV3 action is correct by matching the highlighted move at the bottom left. If not, you'll need to correct it manually.
+- Ensure the player has not made the next move. If the player has made a move, you may tap "Skip Verification" to skip the AI move check.
 
 ---
 ## EV3 Program
@@ -79,15 +84,19 @@ The claw is jammed.
 
 - Help the robot raise the claw, hold it, then start the program. The robot should now be able to automatically lock it up.
 
-### B2. X-axis or Y-axis Motor Jammed mid-move
+### B2. X-axis or Y-axis Motor Jammed or Stopped Mid-Move
+
+If the claw is open but doesn't pick up:
+
+- Nudge the claw. It might be jammed.
 
 If it's X-axis jammed at h-column:
 
 - Nudge the robot to allow the wheel to slip slightly. There's only about 5-10 degrees of movement left but it got stuck.
 
-All other cases:
+All other cases or if above doesn't fix the issue:
 
-- The robot is likely unrecoverable due to EV3 imprecision. **Restart ALL 3 robot programs.**
+- The robot is likely unrecoverable due to EV3 imprecision or transmission corruption. **Restart ALL 3 robot programs.**
 
 ### B3. Does not detect flash transmission
 
