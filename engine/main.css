@@ -104,8 +104,17 @@ body {
     width: 150px;
     transition: transform 150ms;
 }
+#board .square-55d63 {
+    transition: box-shadow 150ms;
+}
 #board.zoom {
     transform: translate(30px, -30px) scale(1.3);
+}
+#board .highlight-white {
+    box-shadow: inset 0 0 3px 3px #36f;
+}
+#board .highlight-black {
+    box-shadow: inset 0 0 3px 3px #f00;
 }
 
 #robotsignal {

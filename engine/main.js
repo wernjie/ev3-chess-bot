@@ -316,6 +316,7 @@ function processInfo(info) {
     evalbarDesc.innerHTML = description;
 }
 function updateMovesListDisplay() {
+    //update list
     moveListElement.innerHTML = "<b><u>Moves</u></b>";
     for (let i = 0; i < movesSAN.length; i+=2) {
         let moveW = movesSAN[i];
@@ -331,6 +332,43 @@ function updateMovesListDisplay() {
     }
     moveListElement.scrollTop = moveListElement.scrollHeight;
     setCookie("cachedGameMoves", JSON.stringify(moves), 365);
+
+    //highlight squares
+    let squareEles = document.getElementsByClassName("square-55d63");
+    if (moves.length > 0) {
+        if (moves.length % 2 == 0) {
+            let lastPlayerMove = splitInstSquares(moves[moves.length - 2]);
+            let lastAIMove = splitInstSquares(moves[moves.length - 1]);
+            for (let ele of squareEles) {
+                let aiMove =
+                    ele.classList.contains("square-" + lastAIMove[0]) ||
+                    ele.classList.contains("square-" + lastAIMove[1]);
+                let playerMove = !aiMove && (
+                    ele.classList.contains("square-" + lastPlayerMove[0]) ||
+                    ele.classList.contains("square-" + lastPlayerMove[1])
+                );
+
+                ele.classList.toggle("highlight-white", playerMove);
+                ele.classList.toggle("highlight-black", aiMove);
+            };
+        } else  {
+            let lastPlayerMove = splitInstSquares(moves[moves.length - 1]);
+            for (let ele of squareEles) {
+                let playerMove = (
+                    ele.classList.contains("square-" + lastPlayerMove[0]) ||
+                    ele.classList.contains("square-" + lastPlayerMove[1])
+                );
+
+                ele.classList.toggle("highlight-white", playerMove);
+                ele.classList.remove("highlight-black");
+            };
+        }
+    } else {
+        for (let x of squareEles) {
+            x.classList.remove("highlight-white");
+            x.classList.remove("highlight-black");
+        };
+    }
 }
 
 /* USER CONFIG */
@@ -383,7 +421,7 @@ function moveHasCastleMove(m) {
     if (from != "e") return null;
     if (to == "g") return "h" + row + "f" + row;
     if (to == "c") return "a" + row + "d" + row;
-    return splitInstSquares(m);
+    return null;
 }
 function moveHasPromotion(m) {
     m = splitInstSquares(m);
@@ -475,6 +513,24 @@ function toggleEval() {
 function toggleSpeech() {
     speakingAllowed = !speakingAllowed;
     document.getElementById("speechBtn").classList.toggle("active", speakingAllowed);
+}
+let skipsBoardVerificationState = false;
+function skipBoardVerification() {
+    if (!stream) {
+        swal("No camera stream detected. You can only skip verification when camera analysis is actively verifying an action or board state.");
+        return;
+    }
+
+    skipsBoardVerificationState = !skipsBoardVerificationState;
+    document.getElementById("skipBoardVerification").classList.toggle("active", skipsBoardVerificationState);
+}
+function shouldSkipVerification() {
+    document.getElementById("skipBoardVerification").classList.remove("active");
+    if (skipsBoardVerificationState) {
+        skipsBoardVerificationState = false;
+        return true;
+    }
+    return false;
 }
 function toggleFullscreen() {
     if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
@@ -572,15 +628,13 @@ function objectKeyPairMaxDiff(obj1, obj2) {
 }
 async function sendRobotMoves(moves) {
     awaitingRobotMove = true;
-    document.getElementById("board").classList.add("zoom");
-    await waitMS(1000);
+    await waitMS(500);
     for (let move of moves) {
         let m = splitInstSquares(move);
         await signalMove(m);
         await waitMS(1000);
     }
     resetRobotSignal();
-    document.getElementById("board").classList.remove("zoom");
 }
 async function signalMove(m) {
     console.log("Signalling robot move message: " + m);
@@ -702,6 +756,8 @@ function processChessPiecesResult(result) {
         return;
     }
 
+    let skipVerification = shouldSkipVerification();
+
     if (chess.game_over()) {
         if (chess.in_checkmate()) {
             if (chess.turn() != "w") { //white checkmated
@@ -748,7 +804,7 @@ function processChessPiecesResult(result) {
     const boardStableThreshold = 3;
     let boardStable = cachedDetectedBoardStateConfidence >= boardStableThreshold;
 
-    if (!boardValid) {
+    if (!boardValid && !skipVerification) {
         progressBarInnerElement.style.width = "0%";
         if (awaitingRobotMove) {
             setStatusText("AI moving, do not interfere...", true);
@@ -789,7 +845,7 @@ function processChessPiecesResult(result) {
         } else {
             progressBarInnerElement.style.width = Math.max(0, 32-countDiff)/32*100 + "%";
         }
-        if (countDiff) return;
+        if (countDiff && !skipVerification) return;
 
         if (awaitingRobotMove) {
             setStatusText("AI move complete", true, true);
@@ -806,7 +862,7 @@ function processChessPiecesResult(result) {
 
     progressBarInnerElement.style.width = cachedDetectedBoardStateConfidence/boardStableThreshold*100 + "%";
 
-    if (!boardStable) {
+    if (!boardStable && !skipVerification) {
         setStatusText("Chessboard interference detected");
         return;
     }
@@ -843,10 +899,10 @@ function processChessPiecesResult(result) {
         console.log("white inconsistency detected: " + whiteLost + " to " + whiteGain);
         if (whiteLost.length > whiteGain.length) {
             setStatusText("Invalid move - missing white piece(s)");
-            if (!warning) setWarningText("See: " + whiteLost);
+            if (!adjustmentWarning) setWarningText("See: " + whiteLost);
         } else {
             setStatusText("Invalid move - extra white piece(s)");
-            if (!warning) setWarningText("See: " + whiteGain);
+            if (!adjustmentWarning) setWarningText("See: " + whiteGain);
         }
         speakText("Invalid move");
         possibleUserMove = "";
@@ -856,13 +912,13 @@ function processChessPiecesResult(result) {
         console.log("non-white legal move detected: " + whiteLost + " to " + whiteGain + "; " + blackLost + " to " + blackGain);
         if (blackLost.length == 0) {
             setStatusText("Invalid move - unexpected black piece(s) gain");
-            if (!warning) setWarningText("See: " + blackGain);
+            if (!adjustmentWarning) setWarningText("See: " + blackGain);
         } else if (blackGain.length == 0) {
             setStatusText("Invalid move - unexpected black pieces removed");
-            if (!warning) setWarningText("See: " + blackLost);
+            if (!adjustmentWarning) setWarningText("See: " + blackLost);
         } else {
             setStatusText("Invalid move - unexpected black pieces moved");
-            if (!warning) setWarningText("See: " + blackLost + " -> " + blackGain);
+            if (!adjustmentWarning) setWarningText("See: " + blackLost + " -> " + blackGain);
         }
         speakText("Invalid move");
 
@@ -943,7 +999,7 @@ function processChessPiecesResult(result) {
         } else {
             if (chess.in_check()) {
                 setStatusText("Illegal move " + move, true);
-                if (!warning) setWarningText("You are currently in check!");
+                if (!adjustmentWarning) setWarningText("You are currently in check!");
             } else {
                 setStatusText("Illegal move " + move, true);
             }
@@ -958,6 +1014,7 @@ function processChessPiecesResult(result) {
 //
 let ponderingMove;
 function playerMove(m, ignore) {
+    if (signallingRobotMove) { return false; }
     if (!m) return false;
     m = splitInstSquares(m);
     let promotion = moveHasPromotion(m);
@@ -1038,12 +1095,7 @@ async function robotMove(m, ponderM) {
     movesSAN.push(SAN);
     updateMovesListDisplay();
     let fen = chess.fen();
-    setTimeout(() => {
-        //async update - check if state is still valid before updating
-        if (fen == chess.fen()) {
-            board.position(fen)
-        }
-    }, 300);
+    board.position(fen)
 
     console.log("Robot moved " + m);
     console.log(chess.ascii());
