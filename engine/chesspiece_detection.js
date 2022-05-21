@@ -157,7 +157,7 @@ function locateChessPiecesInCanvas(canvas) {
     }
   }
 
-  // Scale luminance to maximise 0-100
+  // Scale luminance to maximise 0-100 horizontally
   for (let x of xmap) {
     // for every tile vertically (1-8)
     for (let inSquareOffset of [0,3,6]) {
@@ -189,6 +189,39 @@ function locateChessPiecesInCanvas(canvas) {
       }
     }
   }
+  // Scale luminance to maximise 0-100 vertically
+  for (let y of ymap) {
+    // for every tile horizontally (a-h)
+    for (let inSquareBeginOffset of [0,1,2]) {
+      // scale by considering every column of pixels separately
+      // in the 3x3 grid
+      for (let xmapPart of ["12", "34", "56", "78"]) {
+        // consider for every 2 adjacent tiles horizontally (a-h)
+
+        // scale to max luminance
+        let maxLuminanceVal = 0.1;
+        for (let x of xmapPart) {
+          let sq = y + x;
+          for (let i = inSquareBeginOffset; i < 9; i += 3) {
+            let hsl = hslMap[sq][i];
+            let l = hsl[2];
+            if (l > maxLuminanceVal) {
+              maxLuminanceVal = l;
+            }
+          }
+        }
+        for (let x of xmapPart) {
+          let sq = y + x;
+          for (let i = inSquareBeginOffset; i < 9; i += 3) {
+            let hsl = hslMap[sq][i];
+            hsl[2] = hsl[2] / maxLuminanceVal * 100;
+            hslMap[sq][i] = hsl;
+          }
+        }
+      }
+    }
+  }
+
   // Map to new rgb values
   for (let sq in hslMap) {
     let hslList = hslMap[sq];
