@@ -128,9 +128,6 @@ function locateChessPiecesInCanvas(canvas) {
     for (let y = 0; y < 8; y++) {
       let i = 4*(x*3*24+y*3);
       let sq = ymap[y] + xmap[x];
-      if ("123".indexOf(xmap[x]) == -1) {
-        //continue;
-      }
 
       let TL = i;
       let T  = i + 4*(1);
@@ -226,6 +223,40 @@ function locateChessPiecesInCanvas(canvas) {
   for (let sq in hslMap) {
     let hslList = hslMap[sq];
     rgbMap[sq] = hslList.map((x) => hsl2rgb(x[0], x[1], x[2]));
+  }
+
+  let camcropCanvas = canvas;
+  let camcropContext = camcropCanvas.getContext('2d');
+  var camcropImgData = camcropContext.getImageData(0,0, 8*3, 8*3);
+  for (let x = 0; x < 8; x++) {
+    for (let y = 0; y < 8; y++) {
+      let i = 4*(x*3*24+y*3);
+      let sq = ymap[y] + xmap[x];
+
+      let TL = i;
+      let T  = i + 4*(1);
+      let TR = i + 4*(2);
+      let CL = i + 4*(24);
+      let C  = i + 4*(1 + 24);
+      let CR = i + 4*(2 + 24);
+      let BL = i + 4*(24*2);
+      let B = i + 4*(1 + 24*2);
+      let BR = i + 4*(2 + 24*2);
+
+      try {
+        let toUpdate = [TL, T, TR, CL, C, CR, BL, B, BR];
+        for (let i = 0; i < 9; i++) {
+          let c = toUpdate[i];
+          let rgb = rgbMap[sq][i];
+          camcropImgData.data[c]   = rgb[0];
+          camcropImgData.data[c+1] = rgb[1];
+          camcropImgData.data[c+2] = rgb[2];
+        }
+        camcropContext.putImageData(camcropImgData,0,0);
+      } catch (e) {
+        console.log(e);
+      }
+    }
   }
 
 
