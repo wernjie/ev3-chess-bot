@@ -673,7 +673,7 @@ async function signalMove(m) {
     //transmit move to robot by flashing signal element
     let sepColor = "#ffffff";
     let dataColor = "#aaaaaa";
-    let minTime = 200;
+    let minTime = 110;
     let vals = [val1, val2, val3, val4];
     let el = robotSignalElement;
 
