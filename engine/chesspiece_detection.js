@@ -165,13 +165,19 @@ function locateChessPiecesInCanvas(canvas) {
 
         // scale to max luminance
         let maxLuminanceVal = 0.1;
+        let correspondingHue = 0;
+        let correspondingSat = 0;
         for (let y of ymapPart) {
           let sq = y + x;
           for (let i = inSquareOffset; i < inSquareOffset + 3; i++) {
             let hsl = hslMap[sq][i];
+            let h = hsl[0];
+            let s = hsl[1];
             let l = hsl[2];
             if (l > maxLuminanceVal) {
               maxLuminanceVal = l;
+              correspondingHue = h;
+              correspondingSat = s;
             }
           }
         }
@@ -197,13 +203,19 @@ function locateChessPiecesInCanvas(canvas) {
 
         // scale to max luminance
         let maxLuminanceVal = 0.1;
+        let correspondingHue = 0;
+        let correspondingSat = 0;
         for (let x of xmapPart) {
           let sq = y + x;
           for (let i = inSquareBeginOffset; i < 9; i += 3) {
             let hsl = hslMap[sq][i];
+            let h = hsl[0];
+            let s = hsl[1];
             let l = hsl[2];
             if (l > maxLuminanceVal) {
               maxLuminanceVal = l;
+              correspondingHue = h;
+              correspondingSat = s;
             }
           }
         }
@@ -227,6 +239,7 @@ function locateChessPiecesInCanvas(canvas) {
 
   let camcropCanvas = canvas;
   let camcropContext = camcropCanvas.getContext('2d');
+  camcropContext.imageSmoothingEnabled = false;
   var camcropImgData = camcropContext.getImageData(0,0, 8*3, 8*3);
   for (let x = 0; x < 8; x++) {
     for (let y = 0; y < 8; y++) {
@@ -258,8 +271,6 @@ function locateChessPiecesInCanvas(canvas) {
       }
     }
   }
-
-
 
   let piecesList = {};
   let tilesList = {};
@@ -317,7 +328,7 @@ function locateChessPiecesInCanvas(canvas) {
       )
       // check low luminance and saturation, plus not qualified for tile detection
       let isHslBlackPiece = (hsl) => (
-        ((hsl[1] < hsl[2]/3 && hsl[2] < 30) || (hsl[1] < 35 && hsl[2] < 25) || hsl[2] < 15) &&
+        ((hsl[1] < hsl[2]/3 && hsl[2] < 50) || (hsl[1] < 35 && hsl[2] < 25) || hsl[2] < 15) &&
         !isHslBlackTile(hsl) && !isHslWhiteTile(hsl)
       )
 

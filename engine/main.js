@@ -147,7 +147,11 @@ async function initCamera() {
                     if (!signallingRobotMove) {
                         processLoadedImage(image, resultCanvasElement, sobelCanvas, true);
                         let result = locateChessPiecesInCanvas(resultCanvasElement);
-                        processChessPiecesResult(result);
+                        if (result) {
+                            processChessPiecesResult(result);
+                        } else {
+                            console.error("Cannot obtain processing result!");
+                        }
                     }
                     scheduleNextDetection();
                 });
@@ -669,7 +673,7 @@ async function signalMove(m) {
     //transmit move to robot by flashing signal element
     let sepColor = "#ffffff";
     let dataColor = "#aaaaaa";
-    let minTime = 100;
+    let minTime = 200;
     let vals = [val1, val2, val3, val4];
     let el = robotSignalElement;
 

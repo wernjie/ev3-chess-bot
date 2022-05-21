@@ -171,4 +171,5 @@ function processLoadedImage(img, resultCanvasElement, sobelCanvas, assumeSquare)
     var resultCtx = resultCanvasElement.getContext('2d');
     resultCtx.imageSmoothingEnabled = false;
     resultCtx.drawImage(internalCanvas,bbox.tl.x,bbox.tl.y, deltaX*8, deltaY*8, 0, 0, 24, 24);
+
 }
